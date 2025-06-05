@@ -2,10 +2,19 @@
 let si: any = null;
 let activeWin: any = null;
 
+// Status de compatibilidade no Linux
+let activeWinWorking = false;
+let siWorking = false;
+
 try {
   si = require('systeminformation');
+  siWorking = true;
+  console.log('✅ systeminformation carregado com sucesso');
 } catch (error) {
   console.warn('⚠️  systeminformation não encontrado, usando valores mock');
+  if (process.platform === 'linux') {
+    console.warn('   Para funcionalidade completa no Linux: npm install systeminformation');
+  }
 }
 
 try {
@@ -29,8 +38,31 @@ try {
     console.warn('⚠️  Formato do active-win não reconhecido, usando mock');
     activeWin = null;
   }
+  
+  if (activeWin) {
+    activeWinWorking = true;
+    console.log('✅ active-win carregado com sucesso');
+    
+    // Testar se funciona no Linux
+    if (process.platform === 'linux') {
+      console.log('🐧 Testando active-win no Linux...');
+      activeWin().then(() => {
+        console.log('✅ active-win funciona corretamente no Linux');
+      }).catch((error) => {
+        console.warn('⚠️  active-win pode ter problemas no Linux:', error.message);
+        console.warn('   Verifique se tem as dependências: libxss1 libgconf-2-4');
+        console.warn('   Ubuntu/Debian: sudo apt install libxss1 libgconf-2-4');
+        activeWinWorking = false;
+      });
+    }
+  }
 } catch (error) {
   console.warn('⚠️  active-win não encontrado, usando valores mock');
+  if (process.platform === 'linux') {
+    console.warn('   Para monitoramento de janelas no Linux:');
+    console.warn('   1. npm install active-win');
+    console.warn('   2. sudo apt install libxss1 libgconf-2-4 (Ubuntu/Debian)');
+  }
 }
 
 export interface SystemStatus {
@@ -78,6 +110,18 @@ export class ProcessMonitor {
     'cmd' // Command Prompt
   ];
 
+  constructor() {
+    // Log de compatibilidade
+    console.log(`🖥️  Monitor do sistema - Plataforma: ${process.platform}`);
+    console.log(`📊 systeminformation: ${siWorking ? '✅ OK' : '❌ Não disponível'}`);
+    console.log(`🪟 active-win: ${activeWinWorking ? '✅ OK' : '❌ Não disponível'}`);
+    
+    if (process.platform === 'linux' && !activeWinWorking) {
+      console.log('💡 Para melhor funcionamento no Linux, instale:');
+      console.log('   sudo apt install libxss1 libgconf-2-4');
+    }
+  }
+
   private isDuckdukiApp(appName: string, appTitle: string, appPath: string): boolean {
     const name = appName.toLowerCase();
     const title = appTitle.toLowerCase();
@@ -112,7 +156,6 @@ export class ProcessMonitor {
       return true;
     }
     
-    console.log(`✅ Permitido: ${appName} - ${appTitle}`);
     return false;
   }
 
@@ -147,8 +190,8 @@ export class ProcessMonitor {
 
   private async isProcessRunning(pid: number): Promise<boolean> {
     try {
-      // No Windows, usar tasklist para verificar se o processo ainda existe
       if (process.platform === 'win32') {
+        // No Windows, usar tasklist para verificar se o processo ainda existe
         const { exec } = require('child_process');
         return new Promise((resolve) => {
           exec(`tasklist /FI "PID eq ${pid}"`, (error, stdout) => {
@@ -161,15 +204,24 @@ export class ProcessMonitor {
           });
         });
       } else {
-        // Em sistemas Unix, usar kill com sinal 0 para verificar se o processo existe
+        // Em sistemas Unix (Linux/macOS), usar kill com sinal 0 para verificar se o processo existe
         try {
           process.kill(pid, 0);
           return true;
-        } catch (error) {
+        } catch (error: any) {
+          // ESRCH significa que o processo não existe
+          if (error.code === 'ESRCH') {
+            return false;
+          }
+          // EPERM significa que o processo existe mas não temos permissão (consideramos como existente)
+          if (error.code === 'EPERM') {
+            return true;
+          }
           return false;
         }
       }
     } catch (error) {
+      console.error('Erro ao verificar processo:', error);
       return false;
     }
   }
@@ -195,17 +247,25 @@ export class ProcessMonitor {
   }
 
   async getActiveWindow(): Promise<ActiveWindow | null> {
-    if (!activeWin) {
-      // Mock para desenvolvimento
+    if (!activeWin || !activeWinWorking) {
+      // Mock melhorado para Linux
+      const mockApps = process.platform === 'linux' ? [
+        'Firefox', 'VS Code', 'Terminal', 'Files', 'LibreOffice'
+      ] : [
+        'Visual Studio Code', 'Chrome', 'Terminal', 'Finder', 'Safari'
+      ];
+      
+      const randomApp = mockApps[Math.floor(Math.random() * mockApps.length)];
+      
       return {
-        title: 'Visual Studio Code - Mock',
+        title: `${randomApp} - Mock (Linux)`,
         id: 1234,
         bounds: { x: 0, y: 0, width: 1920, height: 1080 },
         owner: {
-          name: 'Visual Studio Code',
-          processId: 1234,
-          bundleId: 'com.microsoft.VSCode',
-          path: '/Applications/Visual Studio Code.app'
+          name: randomApp,
+          processId: 1234 + Math.floor(Math.random() * 1000),
+          bundleId: `com.${randomApp.toLowerCase()}.app`,
+          path: `/usr/bin/${randomApp.toLowerCase()}`
         },
         memoryUsage: 150000,
         timestamp: Date.now()
@@ -255,13 +315,17 @@ export class ProcessMonitor {
       return currentWindow;
     } catch (error) {
       console.error('Erro ao obter janela ativa:', error);
+      if (process.platform === 'linux') {
+        console.warn('💡 Se o erro persistir no Linux, tente:');
+        console.warn('   sudo apt install libxss1 libgconf-2-4');
+      }
       return null;
     }
   }
 
   async getSystemStatus(): Promise<SystemStatus> {
-    if (!si) {
-      // Mock para desenvolvimento
+    if (!si || !siWorking) {
+      // Mock melhorado para Linux
       const activeWindow = await this.getActiveWindow();
       return {
         cpu: Math.floor(Math.random() * 30) + 10, // 10-40%
@@ -292,6 +356,10 @@ export class ProcessMonitor {
       };
     } catch (error) {
       console.error('Erro ao obter status do sistema:', error);
+      if (process.platform === 'linux') {
+        console.warn('💡 Alguns dados do sistema podem não estar disponíveis no Linux');
+        console.warn('   Isso é normal em alguns ambientes containerizados ou com permissões limitadas');
+      }
       return {
         cpu: 0,
         memory: 0,

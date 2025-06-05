@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const os = require('os');
 
 console.log('🚀 Duckduki - Script de Configuração\n');
 
@@ -17,6 +18,69 @@ if (currentVersion < requiredVersion) {
 }
 
 console.log(`✅ Node.js ${nodeVersion} - OK\n`);
+
+// Verificar plataforma
+const platform = os.platform();
+console.log(`🖥️  Plataforma detectada: ${platform}`);
+
+// Verificações específicas para Linux
+if (platform === 'linux') {
+  console.log('🐧 Configuração para Linux detectada');
+  console.log('📋 Verificando dependências do sistema...');
+  
+  // Verificar dependências do sistema para Linux
+  const linuxDeps = [
+    { pkg: 'libsecret-1-0', desc: 'Necessário para keytar (armazenamento seguro de chaves)' },
+    { pkg: 'libxss1', desc: 'Necessário para active-win (monitoramento de janelas)' },
+    { pkg: 'libgconf-2-4', desc: 'Necessário para active-win (monitoramento de janelas)' }
+  ];
+  
+  let missingDeps = [];
+  
+  for (const dep of linuxDeps) {
+    try {
+      execSync(`dpkg -l | grep ${dep.pkg}`, { stdio: 'pipe' });
+      console.log(`  ✅ ${dep.pkg} - Instalado`);
+    } catch (error) {
+      console.log(`  ❌ ${dep.pkg} - Não encontrado`);
+      missingDeps.push(dep);
+    }
+  }
+  
+  if (missingDeps.length > 0) {
+    console.log('\n⚠️  AVISO: Algumas dependências do sistema estão faltando:');
+    missingDeps.forEach(dep => {
+      console.log(`   • ${dep.pkg}: ${dep.desc}`);
+    });
+    
+    console.log('\n💡 Para instalar no Ubuntu/Debian:');
+    const ubuntuPkgs = missingDeps.map(d => d.pkg).join(' ');
+    console.log(`   sudo apt update && sudo apt install ${ubuntuPkgs}`);
+    
+    console.log('\n💡 Para instalar no Fedora/RHEL:');
+    const fedoraPkgs = missingDeps.map(d => {
+      if (d.pkg === 'libsecret-1-0') return 'libsecret-devel';
+      if (d.pkg === 'libxss1') return 'libXScrnSaver';
+      if (d.pkg === 'libgconf-2-4') return 'GConf2';
+      return d.pkg;
+    }).join(' ');
+    console.log(`   sudo dnf install ${fedoraPkgs}`);
+    
+    console.log('\n💡 Para instalar no Arch:');
+    const archPkgs = missingDeps.map(d => {
+      if (d.pkg === 'libsecret-1-0') return 'libsecret';
+      if (d.pkg === 'libxss1') return 'libxss';
+      if (d.pkg === 'libgconf-2-4') return 'gconf';
+      return d.pkg;
+    }).join(' ');
+    console.log(`   sudo pacman -S ${archPkgs}`);
+    
+    console.log('\n🔄 Após instalar as dependências, execute este script novamente.');
+    console.log('   Algumas funcionalidades podem não funcionar corretamente sem essas dependências.\n');
+  } else {
+    console.log('✅ Todas as dependências do sistema estão instaladas!\n');
+  }
+}
 
 // Verificar dependências
 console.log('📦 Verificando dependências...');
@@ -87,6 +151,13 @@ try {
   console.log('   3. Configure a chave Groq no aplicativo');
   console.log('   4. Teste um comando: "Hello, teste de conexão"\n');
 
+  if (platform === 'linux') {
+    console.log('🐧 Dicas específicas para Linux:');
+    console.log('   • Se a gravação da API key não funcionar, verifique se libsecret está instalado');
+    console.log('   • Se o monitor do sistema não funcionar, verifique libxss1 e libgconf-2-4');
+    console.log('   • Execute o aplicativo com: npm run dev\n');
+  }
+
   console.log('🔧 Comandos úteis:');
   console.log('   npm run dev          - Iniciar desenvolvimento');
   console.log('   npm run build        - Build de produção');
@@ -124,6 +195,11 @@ try {
   console.log('   2. Execute: npm install');
   console.log('   3. Verifique sua conexão com a internet');
   console.log('   4. Tente executar: npm cache clean --force');
+  
+  if (platform === 'linux') {
+    console.log('   5. Instale as dependências do sistema mencionadas acima');
+  }
+  
   process.exit(1);
 }
 

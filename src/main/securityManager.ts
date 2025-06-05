@@ -2,10 +2,30 @@
 let keytar: any = null;
 let Store: any = null;
 
+// Variável para rastrear se keytar está funcionando
+let keytarAvailable = false;
+
 try {
   keytar = require('keytar');
+  // Testar se keytar funciona (no Linux pode falhar se libsecret não estiver instalado)
+  if (process.platform === 'linux') {
+    // Fazer um teste simples para ver se keytar funciona
+    keytar.getPassword('test-service', 'test-account').then(() => {
+      keytarAvailable = true;
+      console.log('✅ Keytar funciona corretamente no Linux');
+    }).catch((error) => {
+      console.warn('⚠️  Keytar não funciona no Linux:', error.message);
+      console.warn('   Instale libsecret-1-dev: sudo apt install libsecret-1-dev');
+      console.warn('   Ou libsecret-devel: sudo dnf install libsecret-devel');
+      keytarAvailable = false;
+    });
+  } else {
+    keytarAvailable = true;
+  }
 } catch (error) {
   console.warn('⚠️  keytar não encontrado, usando armazenamento local simples');
+  console.warn('   Para maior segurança no Linux, instale: npm install keytar');
+  console.warn('   E as dependências do sistema: sudo apt install libsecret-1-dev');
 }
 
 try {
@@ -31,16 +51,54 @@ export class SecurityManager {
       name: 'co-piloto-settings',
       encryptionKey: 'co-piloto-secret-key-2024'
     });
+    
+    // Log da plataforma e status do keytar
+    console.log(`🖥️  Plataforma: ${process.platform}`);
+    if (process.platform === 'linux') {
+      console.log('🐧 Executando no Linux - verificando compatibilidade...');
+    }
+  }
+
+  // Verificar se keytar está disponível e funcionando
+  private async isKeytarWorking(): Promise<boolean> {
+    if (!keytar) return false;
+    
+    try {
+      // Teste simples para verificar se keytar funciona
+      await keytar.getPassword('duckduki-test', 'test-key');
+      return true;
+    } catch (error) {
+      if (process.platform === 'linux') {
+        console.warn('⚠️  Keytar não funciona no Linux. Possíveis soluções:');
+        console.warn('   Ubuntu/Debian: sudo apt install libsecret-1-dev');
+        console.warn('   Fedora/RHEL: sudo dnf install libsecret-devel');
+        console.warn('   Arch: sudo pacman -S libsecret');
+        console.warn('   Após instalar, reinicie o aplicativo.');
+      }
+      return false;
+    }
   }
 
   async setGroqKey(apiKey: string): Promise<void> {
     try {
-      if (keytar) {
+      const keytarWorking = await this.isKeytarWorking();
+      
+      if (keytar && keytarWorking) {
         // Armazenar no keychain do sistema
         await keytar.setPassword(this.serviceName, 'groq-api-key', apiKey);
+        console.log('✅ Chave Groq salva no keychain do sistema');
+        this.store.set('groq-storage-method', 'keytar');
       } else {
-        // Fallback: armazenar no store (menos seguro, mas funcional para desenvolvimento)
+        // Fallback: armazenar no store criptografado
         this.store.set('groq-api-key-fallback', apiKey);
+        console.log('⚠️  Chave Groq salva em fallback (menos seguro)');
+        this.store.set('groq-storage-method', 'fallback');
+        
+        if (process.platform === 'linux') {
+          console.log('💡 Para maior segurança, instale libsecret:');
+          console.log('   sudo apt install libsecret-1-dev (Ubuntu/Debian)');
+          console.log('   sudo dnf install libsecret-devel (Fedora/RHEL)');
+        }
       }
       
       // Marcar que temos uma chave configurada
@@ -53,7 +111,9 @@ export class SecurityManager {
 
   async getGroqKey(): Promise<string | null> {
     try {
-      if (keytar) {
+      const storageMethod = this.store.get('groq-storage-method', 'unknown');
+      
+      if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
         const apiKey = await keytar.getPassword(this.serviceName, 'groq-api-key');
         return apiKey;
       } else {
@@ -62,7 +122,8 @@ export class SecurityManager {
       }
     } catch (error) {
       console.error('Erro ao recuperar chave Groq:', error);
-      return null;
+      // Tentar fallback em caso de erro
+      return this.store.get('groq-api-key-fallback', null);
     }
   }
 
@@ -71,9 +132,9 @@ export class SecurityManager {
       const hasKey = this.store.get('hasGroqKey', false) as boolean;
       if (!hasKey) return false;
       
-      // Verificar se a chave ainda existe no keychain
+      // Verificar se a chave ainda existe
       const key = await this.getGroqKey();
-      return key !== null;
+      return key !== null && key.length > 0;
     } catch (error) {
       return false;
     }
@@ -81,12 +142,16 @@ export class SecurityManager {
 
   async removeGroqKey(): Promise<void> {
     try {
-      if (keytar) {
+      const storageMethod = this.store.get('groq-storage-method', 'unknown');
+      
+      if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
         await keytar.deletePassword(this.serviceName, 'groq-api-key');
-      } else {
-        this.store.delete('groq-api-key-fallback');
       }
+      
+      // Sempre limpar fallback também
+      this.store.delete('groq-api-key-fallback');
       this.store.delete('hasGroqKey');
+      this.store.delete('groq-storage-method');
     } catch (error) {
       console.error('Erro ao remover chave Groq:', error);
     }

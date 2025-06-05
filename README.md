@@ -60,79 +60,103 @@ Um aplicativo desktop multiplataforma (Windows, macOS, Linux) de alta performanc
 ## 🚀 Instalação e Configuração
 
 ### Pré-requisitos
-- **Node.js** 18+ 
+
+- **Node.js 18+** 
 - **npm** ou **yarn**
-- **Chave API Groq** (gratuita em [console.groq.com](https://console.groq.com))
+- **Git**
+
+### Linux - Dependências do Sistema
+
+Para funcionar corretamente no Linux, instale as seguintes dependências:
+
+#### Ubuntu/Debian:
+```bash
+sudo apt update
+sudo apt install libsecret-1-dev libxss1 libgconf-2-4
+```
+
+#### Fedora/RHEL:
+```bash
+sudo dnf install libsecret-devel libXScrnSaver GConf2
+```
+
+#### Arch Linux:
+```bash
+sudo pacman -S libsecret libxss gconf
+```
+
+**Por que essas dependências são necessárias:**
+- `libsecret`: Para armazenamento seguro da API key do Groq
+- `libxss1` + `libgconf-2-4`: Para monitoramento de janelas ativas
 
 ### Instalação
 
-1. **Clone o repositório**
+1. **Clone o repositório:**
 ```bash
 git clone https://github.com/seu-usuario/duckduki.git
 cd duckduki
 ```
 
-2. **Inicialização rápida (recomendado)**
+2. **Execute o script de configuração:**
 ```bash
-npm run quick-start
-# Este comando faz: instalação + configuração + criação de ícone + execução
+npm run setup
 ```
 
-**OU**
+3. **Obtenha sua chave API Groq:**
+   - Acesse [console.groq.com](https://console.groq.com)
+   - Crie uma conta ou faça login
+   - Vá para "API Keys" e crie uma nova chave
+   - Guarde essa chave, você vai precisar dela
 
-2. **Instalação manual**
-```bash
-npm install           # Instalar dependências
-npm run setup         # Configuração inicial
-npm run create-icon   # Criar ícone da aplicação
-```
-
-3. **Configure a chave Groq**
-   - Obtenha sua chave em [console.groq.com](https://console.groq.com)
-   - Abra o aplicativo e vá em Configurações (⚙️)
-   - Cole sua chave API
-
-4. **Execute em modo desenvolvimento**
+4. **Inicie o desenvolvimento:**
 ```bash
 npm run dev
 ```
 
-5. **Build para produção**
+5. **Configure a chave Groq no aplicativo** através do painel de configurações
+
+## 🐧 Troubleshooting Linux
+
+### Problema: API key não salva
+**Sintoma:** A chave da API Groq não é salva ou é perdida após reiniciar
+**Solução:**
 ```bash
-# Para sua plataforma atual
-npm run dist
+# Instalar libsecret
+sudo apt install libsecret-1-dev  # Ubuntu/Debian
+sudo dnf install libsecret-devel  # Fedora/RHEL
+sudo pacman -S libsecret          # Arch
 
-# Para Windows
-npm run dist:win
-
-# Para macOS
-npm run dist:mac
-
-# Para Linux
-npm run dist:linux
+# Reiniciar o aplicativo
+npm run dev
 ```
 
-### Primeira Configuração
+### Problema: Monitor do sistema não funciona
+**Sintoma:** Não consegue detectar janelas ativas ou dados do sistema
+**Solução:**
+```bash
+# Instalar dependências do active-win
+sudo apt install libxss1 libgconf-2-4  # Ubuntu/Debian
+sudo dnf install libXScrnSaver GConf2   # Fedora/RHEL
+sudo pacman -S libxss gconf             # Arch
 
-1. **Configure a Chave Groq**
-   - Abra o Duckduki
-   - Clique no ícone de configurações (⚙️)
-   - Cole sua chave da API Groq
-   - Clique em "Salvar Chave"
+# Reiniciar o aplicativo
+npm run dev
+```
 
-2. **Teste a Conexão**
-   - Digite "Hello, teste de conexão" no campo de comando
-   - Se configurado corretamente, você receberá uma resposta da IA
+### Problema: Permissões no Wayland
+**Sintoma:** Erros de permissão em ambientes Wayland
+**Solução:**
+```bash
+# Executar em modo XWayland (compatibilidade)
+export GDK_BACKEND=x11
+npm run dev
+```
 
-3. **Configure E-mail (Opcional)**
-   - Para resumos de e-mail, configure IMAP nas configurações
-   - Suporte para Gmail e Outlook
-
-4. **Configure Integração com Paleta de Comandos (Windows)**
-   - Execute como administrador: `.\Duckduki\build-and-register.ps1`
-   - Registre a extensão na Command Palette do Windows
-   - Use Win+X e digite "Duckduki" para acesso rápido
-   - **Veja**: `Duckduki/README-INTEGRACAO.md` para instruções detalhadas
+### Problema: Snap/Flatpak/AppImage
+**Sintoma:** Dependências não funcionam em pacotes confinados
+**Solução:**
+- Use a instalação via npm/git ao invés de pacotes confinados
+- Ou instale as dependências no sistema host
 
 ## 💡 Guia de Uso
 
