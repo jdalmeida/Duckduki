@@ -1,0 +1,90 @@
+.resource-indicator {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.resource-indicator.loading {
+  text-align: center;
+  color: #718096;
+  font-size: 12px;
+}
+
+.system-stats {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #4a5568;
+  min-width: 30px;
+}
+
+.stat-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stat-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.stat-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2d3748;
+  min-width: 35px;
+  text-align: right;
+}
+
+.active-app {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.app-label {
+  font-size: 12px;
+  color: #718096;
+}
+
+.app-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #2d3748;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+@media (max-width: 400px) {
+  .system-stats {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .active-app {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+} 

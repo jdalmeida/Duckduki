@@ -1,0 +1,141 @@
+.command-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.command-form {
+  width: 100%;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid rgba(102, 126, 234, 0.2);
+  border-radius: 12px;
+  padding: 4px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-wrapper:focus-within {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.command-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 12px 16px;
+  font-size: 14px;
+  background: transparent;
+  color: #2d3748;
+  resize: none;
+}
+
+.command-input::placeholder {
+  color: #a0aec0;
+}
+
+.command-input.disabled {
+  color: #a0aec0;
+  cursor: not-allowed;
+}
+
+.voice-btn, .submit-btn {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.voice-btn:hover:not(.disabled), 
+.submit-btn:hover:not(.disabled) {
+  background-color: rgba(102, 126, 234, 0.1);
+  transform: scale(1.05);
+}
+
+.voice-btn.listening {
+  background-color: rgba(245, 101, 101, 0.1);
+  animation: pulse 1.5s infinite;
+}
+
+.voice-btn.disabled, 
+.submit-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submit-btn:not(.disabled) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.quick-suggestions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.suggestion-pill {
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  color: #667eea;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.suggestion-pill:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.2);
+  transform: translateY(-1px);
+}
+
+.suggestion-pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsividade */
+@media (max-width: 400px) {
+  .input-wrapper {
+    padding: 2px;
+  }
+  
+  .command-input {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  .voice-btn, .submit-btn {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .suggestion-pill {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+} 

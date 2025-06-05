@@ -1,0 +1,195 @@
+.suggestion-card {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.suggestion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.type-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.header-text {
+  flex: 1;
+}
+
+.card-title {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.card-time {
+  font-size: 12px;
+  color: #718096;
+}
+
+.header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.action-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.copy-btn:hover {
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.card-content {
+  margin-bottom: 12px;
+}
+
+.content-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #4a5568;
+  white-space: pre-wrap;
+}
+
+.expand-btn {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+  padding: 4px 0;
+  transition: color 0.2s;
+}
+
+.expand-btn:hover {
+  color: #5a67d8;
+  text-decoration: underline;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: 1px solid transparent;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.action-btn.primary:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  transform: translateY(-1px);
+}
+
+.action-btn.secondary {
+  background: white;
+  color: #667eea;
+  border: 1px solid #667eea;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.action-btn.secondary:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+/* Tipos específicos */
+.suggestion-card.email {
+  border-left: 4px solid #3182ce;
+}
+
+.suggestion-card.code {
+  border-left: 4px solid #38a169;
+}
+
+.suggestion-card.contextual {
+  border-left: 4px solid #ed8936;
+}
+
+.suggestion-card.command {
+  border-left: 4px solid #667eea;
+}
+
+/* Responsividade */
+@media (max-width: 400px) {
+  .suggestion-card {
+    padding: 12px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .header-left {
+    gap: 8px;
+  }
+  
+  .type-icon {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+  
+  .card-title {
+    font-size: 13px;
+  }
+  
+  .content-text {
+    font-size: 13px;
+  }
+  
+  .card-actions {
+    flex-direction: column;
+  }
+} 
