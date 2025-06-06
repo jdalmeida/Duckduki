@@ -177,16 +177,10 @@ Sempre seja útil, conversacional e responda de forma clara e objetiva.`,
         
         // Para esta versão, vamos processar tools de forma manual
         // O stream já inclui as tool calls automaticamente
-        // ...
-
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        res.setHeader('Transfer-Encoding', 'chunked');
-
-        console.log('📡 [CHAT API] Enviando resposta streamada...');
-        resultWithTools.pipeDataStreamToResponse(res);
-
-        console.log('✅ [CHAT API] Streaming finalizado com sucesso.');
-
+        const processingTime = Date.now() - startTime;
+        console.log(`🎯 [CHAT API] Stream iniciado em ${processingTime}ms`);
+        
+        return resultWithTools.toTextStreamResponse();
 
       } catch (error) {
         const processingTime = Date.now() - startTime;
