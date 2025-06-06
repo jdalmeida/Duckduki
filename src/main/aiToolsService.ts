@@ -350,7 +350,8 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
       const result = await this.taskService.getTasks();
       return {
         success: true,
-        message: `📋 Tarefas obtidas com sucesso`
+        message: `📋 Tarefas obtidas com sucesso`,
+        data: result
       };
     } catch (error) {
       return {
