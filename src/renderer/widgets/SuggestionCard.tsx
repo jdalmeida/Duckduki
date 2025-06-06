@@ -8,6 +8,7 @@ interface Suggestion {
   content: string;
   timestamp: number;
   actionable?: boolean;
+  isUserMessage?: boolean;
 }
 
 interface SuggestionCardProps {
@@ -75,7 +76,7 @@ const SuggestionCard: React.FC<SuggestionCardProps> = ({ suggestion }) => {
     : suggestion.content.substring(0, 200) + '...';
 
   return (
-    <div className={`suggestion-card ${suggestion.type}`}>
+    <div className={`suggestion-card ${suggestion.type} ${suggestion.isUserMessage ? 'user-message' : ''}`}>
       <div className="card-header">
         <div className="header-left">
           <span 

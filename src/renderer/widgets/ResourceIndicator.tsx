@@ -25,15 +25,15 @@ const ResourceIndicator: React.FC<ResourceIndicatorProps> = ({ status }) => {
   }
 
   const getCpuColor = (cpu: number) => {
-    if (cpu < 50) return '#38a169';
-    if (cpu < 80) return '#ed8936';
-    return '#e53e3e';
+    if (cpu < 50) return '#22c55e';
+    if (cpu < 80) return '#f59e0b';
+    return '#ef4444';
   };
 
   const getMemoryColor = (memory: number) => {
-    if (memory < 60) return '#38a169';
-    if (memory < 85) return '#ed8936';
-    return '#e53e3e';
+    if (memory < 60) return '#22c55e';
+    if (memory < 85) return '#f59e0b';
+    return '#ef4444';
   };
 
   return (
@@ -45,8 +45,9 @@ const ResourceIndicator: React.FC<ResourceIndicatorProps> = ({ status }) => {
             <div 
               className="stat-fill"
               style={{ 
-                width: `${status.cpu}%`,
-                backgroundColor: getCpuColor(status.cpu)
+                width: `${Math.max(status.cpu, 2)}%`,
+                backgroundColor: getCpuColor(status.cpu),
+                background: getCpuColor(status.cpu)
               }}
             />
           </div>
@@ -59,8 +60,9 @@ const ResourceIndicator: React.FC<ResourceIndicatorProps> = ({ status }) => {
             <div 
               className="stat-fill"
               style={{ 
-                width: `${status.memory}%`,
-                backgroundColor: getMemoryColor(status.memory)
+                width: `${Math.max(status.memory, 2)}%`,
+                backgroundColor: getMemoryColor(status.memory),
+                background: getMemoryColor(status.memory)
               }}
             />
           </div>

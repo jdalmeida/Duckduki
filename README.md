@@ -31,8 +31,18 @@ Um aplicativo desktop multiplataforma (Windows, macOS, Linux) de alta performanc
 - **Modo Foco Automático**: Detecta longos períodos de trabalho e sugere pausas
 - **Análise de Processos**: Identifica processos que consomem muitos recursos
 
+### 💡 Painel de Tendências Tech (Quadro de Ideias)
+- **Feeds Múltiplos**: Integração com Hacker News, Reddit r/programming, GitHub Trending e Dev.to
+- **Painel Flutuante**: Interface moderna que desliza pela lateral direita da tela
+- **Filtros Inteligentes**: Filtre por fonte (HN, Reddit, GitHub, Dev.to) ou busque por palavras-chave
+- **Auto-Refresh**: Atualização automática a cada 15 minutos para manter conteúdo fresco
+- **Cache Otimizado**: Sistema de cache de 10 minutos para performance e eficiência
+- **Links Diretos**: Clique para abrir posts diretamente no navegador
+- **Inspiração Criativa**: Descubra projetos trending, discussões técnicas e artigos relevantes
+
 ### 🎯 Acesso Rápido e Integração
 - **Atalho Global**: Pressione **Ctrl+Shift+Space* (Windows/Linux) ou **Cmd+Shift+Space** (Mac) para abrir o agente instantaneamente
+- **Quadro de Ideias**: Botão 💡 no cabeçalho para acessar feeds de tendências tech
 - **Integração com Paleta de Comandos do Windows**: Acesso nativo via Command Palette do Windows
 - **Comandos Rápidos**: Abrir Duckduki, chat, configurações via Win+X
 - **Auto-Inicialização**: A extensão pode iniciar o agente automaticamente
@@ -47,7 +57,8 @@ Um aplicativo desktop multiplataforma (Windows, macOS, Linux) de alta performanc
 
 ### Widget Flutuante
 - **Ícone na Bandeja**: Acesso rápido via systray
-- **Painel Flutuante**: Interface compacta e elegante
+- **Painel Principal**: Interface compacta e elegante
+- **Painel de Feeds**: Quadro de ideias lateral com tendências tech
 - **Campo de Comando**: Entrada de texto ou voz
 - **Cards de Resposta**: Visualização organizada das sugestões
 
@@ -191,6 +202,48 @@ como otimizar performance em React?
 explique este erro de TypeScript
 sugira melhorias para esta função
 ```
+
+### Usando o Quadro de Ideias
+
+**Acesso ao Painel**
+- Clique no botão 💡 no cabeçalho principal
+- O painel desliza pela lateral direita da tela
+
+**Funcionalidades**
+- **Filtros**: Use os botões de fonte (Todos, HN, Reddit, GitHub, Dev.to)
+- **Busca**: Digite palavras-chave no campo de busca
+- **Auto-refresh**: Toggle no canto superior direito (🔄)
+- **Atualizar**: Botão de refresh manual (↻)
+- **Fechar**: Botão ✕ ou clique fora do painel
+
+**Fontes de Conteúdo**
+- **🧡 Hacker News**: Top stories da comunidade tech
+- **🔴 Reddit**: Posts populares do r/programming  
+- **⚫ GitHub**: Repositórios trending com alta atividade
+- **💚 Dev.to**: Artigos técnicos populares da semana
+
+### Usando o Organizador de Tarefas
+
+**Acesso ao Organizador**
+- Clique no botão 📋 no cabeçalho principal
+- Interface modal centralizada com todas as funcionalidades
+
+**Adicionando Tarefas**
+- Digite tarefas em linguagem natural no campo de texto
+- Exemplos: "Finalizar relatório até sexta", "Comprar ingredientes hoje"
+- A IA analisa automaticamente urgência, facilidade e prioridade
+
+**Gerenciamento**
+- **Filtros**: Todas, Pendentes, Em Progresso, Concluídas, Críticas, Alta
+- **Ações**: Iniciar (▶️), Concluir (✅), Pausar (⏸️), Deletar (🗑️)
+- **Estatísticas**: Dashboard em tempo real com contadores
+- **Sugestões IA**: Botão 🧠 para insights e otimizações
+
+**Sistema de Prioridades**
+- 🔴 **Crítica**: Alta urgência + Alta facilidade (fazer agora)
+- 🟠 **Alta**: Alta urgência + Baixa facilidade (importante mas difícil)
+- 🟡 **Média**: Baixa urgência + Alta facilidade (quick wins)
+- 🟢 **Baixa**: Baixa urgência + Baixa facilidade (evitar/delegar)
 
 ### Atalhos de Teclado
 

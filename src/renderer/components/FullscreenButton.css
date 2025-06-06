@@ -1,0 +1,140 @@
+.fullscreen-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--);
+  font-size: 16px;
+  overflow: visible;
+}
+
+.fullscreen-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+}
+
+.fullscreen-button:active {
+  transform: translateY(0px);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.fullscreen-button.active {
+  background: linear-gradient(135deg, 
+    rgba(139, 69, 255, 0.3) 0%,
+    rgba(59, 130, 246, 0.3) 100%);
+  border-color: rgba(139, 69, 255, 0.4);
+  color: rgba(255, 255, 255, 1);
+}
+
+.fullscreen-button.active:hover {
+  background: linear-gradient(135deg, 
+    rgba(139, 69, 255, 0.4) 0%,
+    rgba(59, 130, 246, 0.4) 100%);
+  border-color: rgba(139, 69, 255, 0.6);
+}
+
+.fullscreen-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  transition: transform 0.2s ease;
+}
+
+.fullscreen-button:hover .fullscreen-icon {
+  transform: scale(1.1);
+}
+
+.fullscreen-tooltip {
+  position: absolute;
+  bottom: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 1000;
+  animation: tooltipFadeIn 0.2s ease-out;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.fullscreen-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid rgba(0, 0, 0, 0.9);
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .fullscreen-button {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .fullscreen-icon {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .fullscreen-tooltip {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+}
+
+/* Estados especiais */
+.fullscreen-button:focus {
+  outline: none;
+  box-shadow: 
+    0 0 0 3px rgba(139, 69, 255, 0.3),
+    0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.fullscreen-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.fullscreen-button:disabled:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+} 

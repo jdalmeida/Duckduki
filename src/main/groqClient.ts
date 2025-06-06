@@ -7,6 +7,9 @@ try {
   console.warn('⚠️  axios não encontrado, usando fetch nativo');
 }
 
+import { KnowledgeService } from './knowledgeService';
+import { AIToolsService } from './aiToolsService';
+
 export interface GroqResponse {
   choices: Array<{
     message: {
@@ -25,9 +28,16 @@ export interface Email {
 export class GroqClient {
   private apiKey: string;
   private baseUrl = 'https://api.groq.com/openai/v1';
+  private knowledgeService: KnowledgeService;
+  private aiToolsService: AIToolsService | null = null;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
+    this.knowledgeService = new KnowledgeService();
+  }
+
+  setAIToolsService(aiToolsService: AIToolsService) {
+    this.aiToolsService = aiToolsService;
   }
 
   private async makeRequest(messages: Array<{ role: string; content: string }>, maxTokens: number = 512): Promise<string> {
@@ -76,11 +86,18 @@ export class GroqClient {
     }
   }
 
-  async processCommand(command: string): Promise<string> {
+  async processCommand(command: string, saveToKnowledge: boolean = true): Promise<string> {
+    // Buscar conhecimento contextual para o comando
+    const contextualKnowledge = await this.knowledgeService.getContextualKnowledge(command, 3);
+    
+    const systemMessage = `Você é um assistente de produtividade inteligente. Responda de forma concisa e útil aos comandos do usuário. Se for sobre código, seja específico. Se for sobre organização, seja prático.
+    
+    ${contextualKnowledge !== 'Nenhum conhecimento relevante encontrado na base de dados.' ? contextualKnowledge : ''}`;
+
     const messages = [
       {
         role: 'system',
-        content: 'Você é um assistente de produtividade inteligente. Responda de forma concisa e útil aos comandos do usuário. Se for sobre código, seja específico. Se for sobre organização, seja prático.'
+        content: systemMessage
       },
       {
         role: 'user',
@@ -88,7 +105,73 @@ export class GroqClient {
       }
     ];
 
-    return await this.makeRequest(messages);
+    const response = await this.makeRequest(messages);
+    
+    // Salvar a conversa na base de conhecimento se solicitado
+    if (saveToKnowledge) {
+      await this.knowledgeService.saveConversation(command, response);
+    }
+
+    return response;
+  }
+
+  async processCommandWithContextStream(command: string, chatContext: Array<{ role: string; content: string }>) {
+    // Se o AIToolsService estiver disponível, usar tools com streaming
+    if (this.aiToolsService) {
+      return await this.aiToolsService.processWithToolsStream(command, chatContext);
+    }
+    
+    // Fallback sem tools
+    throw new Error('AIToolsService não disponível para streaming');
+  }
+
+  async processCommandWithContext(command: string, chatContext: Array<{ role: string; content: string }>, saveToKnowledge: boolean = true): Promise<string> {
+    // Se o AIToolsService estiver disponível, usar tools
+    if (this.aiToolsService) {
+      try {
+        const response = await this.aiToolsService.processWithTools(command, chatContext);
+        
+        // Salvar a conversa na base de conhecimento se solicitado
+        if (saveToKnowledge) {
+          await this.knowledgeService.saveConversation(command, response, `Contexto: ${chatContext.length} mensagens anteriores (com tools)`);
+        }
+        
+        return response;
+      } catch (error) {
+        console.error('Erro ao usar tools, fallback para método tradicional:', error);
+        // Continuar com o método tradicional em caso de erro
+      }
+    }
+
+    // Método tradicional (fallback)
+    const contextualKnowledge = await this.knowledgeService.getContextualKnowledge(command, 3);
+    
+    const systemMessage = `Você é um assistente de produtividade inteligente chamado Duckduki. Você está tendo uma conversa contínua com o usuário e deve manter o contexto da conversa anterior. Responda de forma concisa e útil aos comandos do usuário. Se for sobre código, seja específico. Se for sobre organização, seja prático.
+    
+    ${contextualKnowledge !== 'Nenhum conhecimento relevante encontrado na base de dados.' ? contextualKnowledge : ''}`;
+
+    // Construir mensagens com contexto da conversa
+    const messages = [
+      {
+        role: 'system',
+        content: systemMessage
+      },
+      // Adicionar contexto das mensagens anteriores (limitado a 15 mensagens)
+      ...chatContext.slice(-14), // Garantir que não exceda o limite junto com a nova mensagem
+      {
+        role: 'user',
+        content: command
+      }
+    ];
+
+    const response = await this.makeRequest(messages, 1024); // Mais tokens para respostas contextuais
+    
+    // Salvar a conversa na base de conhecimento se solicitado
+    if (saveToKnowledge) {
+      await this.knowledgeService.saveConversation(command, response, `Contexto: ${chatContext.length} mensagens anteriores`);
+    }
+
+    return response;
   }
 
   async summarizeEmails(emails: Email[]): Promise<string> {
@@ -163,10 +246,36 @@ export class GroqClient {
 
   async testConnection(): Promise<boolean> {
     try {
-      await this.processCommand('Hello, teste de conexão');
+      await this.processCommand('Hello, teste de conexão', false); // Não salvar teste de conexão
       return true;
     } catch (error) {
       return false;
     }
+  }
+
+  // Métodos para gerenciar base de conhecimento
+  getKnowledgeService(): KnowledgeService {
+    return this.knowledgeService;
+  }
+
+  async addKnowledge(title: string, content: string, type: 'note' | 'post_summary' | 'conversation' | 'document' | 'code' | 'reference', tags: string[] = [], url?: string) {
+    return await this.knowledgeService.addKnowledgeItem({
+      title,
+      content,
+      type,
+      tags,
+      url,
+      summary: await this.knowledgeService.generateSummary(content, title, this)
+    });
+  }
+
+  async searchKnowledge(query: string, type?: 'note' | 'post_summary' | 'conversation' | 'document' | 'code' | 'reference', limit: number = 10) {
+    return await this.knowledgeService.searchKnowledge(query, type, limit);
+  }
+
+  async savePostSummaryWithAI(title: string, content: string, url?: string, tags: string[] = []) {
+    // Gerar resumo usando IA
+    const summary = await this.knowledgeService.generateSummary(content, title, this);
+    return await this.knowledgeService.savePostSummary(title, summary, url, tags);
   }
 } 

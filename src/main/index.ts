@@ -4,7 +4,7 @@ if (typeof require === 'undefined') {
   process.exit(1);
 }
 
-import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, globalShortcut } from 'electron';
+import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, globalShortcut, shell } from 'electron';
 import { join } from 'path';
 import { GroqClient } from './groqClient';
 import { EmailService } from './emailService';
@@ -12,16 +12,22 @@ import { ProcessMonitor } from './processMonitor';
 import { DeployService } from './deployService';
 import { SecurityManager } from './securityManager';
 import { CommandPaletteServer } from './commandPaletteServer';
+import { feedService } from './feedService';
+import { taskService } from './taskService';
+import { AIToolsService } from './aiToolsService';
+import { ChatAPIServer } from './apiRoutes';
 
 class CoPilotoDesktop {
   private mainWindow: BrowserWindow | null = null;
   private tray: Tray | null = null;
   private groqClient: GroqClient | null = null;
+  private aiToolsService: AIToolsService | null = null;
   private emailService: EmailService;
   private processMonitor: ProcessMonitor;
   private deployService: DeployService;
   private securityManager: SecurityManager;
   private commandPaletteServer: CommandPaletteServer;
+  private chatAPIServer: ChatAPIServer;
 
   constructor() {
     this.emailService = new EmailService();
@@ -29,6 +35,7 @@ class CoPilotoDesktop {
     this.deployService = new DeployService();
     this.securityManager = new SecurityManager();
     this.commandPaletteServer = new CommandPaletteServer();
+    this.chatAPIServer = new ChatAPIServer();
   }
 
   async initialize() {
@@ -45,6 +52,26 @@ class CoPilotoDesktop {
     const groqKey = await this.securityManager.getGroqKey();
     if (groqKey) {
       this.groqClient = new GroqClient(groqKey);
+      // Configurar IA para o serviço de tarefas
+      taskService.setGroqClient(this.groqClient);
+      
+      // Inicializar AIToolsService com todos os módulos
+      this.aiToolsService = new AIToolsService(
+        groqKey,
+        this.emailService,
+        this.groqClient.getKnowledgeService(),
+        taskService,
+        feedService,
+        this.processMonitor,
+        this.deployService
+      );
+      
+      // Conectar o AIToolsService ao GroqClient
+      this.groqClient.setAIToolsService(this.aiToolsService);
+
+      // Configurar ChatAPIServer
+      this.chatAPIServer.setGroqApiKey(groqKey);
+      this.chatAPIServer.setAIToolsService(this.aiToolsService);
     }
 
     // Carregar configuração de email se existir
@@ -59,6 +86,7 @@ class CoPilotoDesktop {
     this.setupGlobalShortcuts();
     this.startMonitoring();
     this.startCommandPaletteServer();
+    this.startChatAPIServer();
 
     // Manter app rodando em background
     app.on('window-all-closed', (e) => {
@@ -231,6 +259,42 @@ class CoPilotoDesktop {
       }
     });
 
+    // Comando com contexto de chat
+    ipcMain.handle('process-command-with-context', async (event, command: string, chatContext: Array<{ role: string; content: string }>) => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const response = await this.groqClient.processCommandWithContext(command, chatContext);
+        return { success: true, response };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Comando com contexto de chat (streaming)
+    ipcMain.handle('process-command-with-context-stream', async (event, command: string, chatContext: Array<{ role: string; content: string }>) => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const stream = await this.groqClient.processCommandWithContextStream(command, chatContext);
+        
+        // Converter stream para array de chunks
+        const chunks: string[] = [];
+        for await (const chunk of stream.textStream) {
+          chunks.push(chunk);
+        }
+        
+        const fullResponse = chunks.join('');
+        return { success: true, response: fullResponse, isStream: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
     // Obter resumo de emails
     ipcMain.handle('get-email-summary', async () => {
       try {
@@ -323,6 +387,23 @@ class CoPilotoDesktop {
       try {
         await this.securityManager.setGroqKey(apiKey);
         this.groqClient = new GroqClient(apiKey);
+        // Configurar IA para o serviço de tarefas
+        taskService.setGroqClient(this.groqClient);
+        
+        // Inicializar AIToolsService com todos os módulos
+        this.aiToolsService = new AIToolsService(
+          apiKey,
+          this.emailService,
+          this.groqClient.getKnowledgeService(),
+          taskService,
+          feedService,
+          this.processMonitor,
+          this.deployService
+        );
+        
+        // Conectar o AIToolsService ao GroqClient
+        this.groqClient.setAIToolsService(this.aiToolsService);
+        
         return { success: true };
       } catch (error) {
         return { error: error.message };
@@ -409,6 +490,381 @@ class CoPilotoDesktop {
         return { error: error.message };
       }
     });
+
+    // Obter feeds de tendências
+    ipcMain.handle('get-tech-feeds', async (event, limitPerSource: number = 8) => {
+      try {
+        const result = await feedService.getAllFeeds(limitPerSource);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error.message || 'Erro ao buscar feeds' 
+        };
+      }
+    });
+
+    // Obter feeds filtrados
+    ipcMain.handle('get-filtered-feeds', async (event, sources: string[], keywords?: string[]) => {
+      try {
+        const result = await feedService.getFilteredFeeds(sources, keywords);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error.message || 'Erro ao filtrar feeds' 
+        };
+      }
+    });
+
+    // Limpar cache de feeds
+    ipcMain.handle('clear-feeds-cache', async () => {
+      try {
+        feedService.clearCache();
+        return { success: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Abrir URL externa
+    ipcMain.handle('open-external-url', async (event, url: string) => {
+      try {
+        await shell.openExternal(url);
+        return { success: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // === HANDLERS DE TAREFAS ===
+
+    // Adicionar tarefa
+    ipcMain.handle('add-task', async (event, input: string) => {
+      try {
+        const result = await taskService.addTask(input);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao adicionar tarefa'
+        };
+      }
+    });
+
+    // Obter tarefas
+    ipcMain.handle('get-tasks', async (event, filter?: any) => {
+      try {
+        const result = taskService.getTasks(filter);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao obter tarefas'
+        };
+      }
+    });
+
+    // Atualizar status da tarefa
+    ipcMain.handle('update-task-status', async (event, taskId: string, status: string) => {
+      try {
+        const result = await taskService.updateTaskStatus(taskId, status as any);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao atualizar tarefa'
+        };
+      }
+    });
+
+    // Deletar tarefa
+    ipcMain.handle('delete-task', async (event, taskId: string) => {
+      try {
+        const result = await taskService.deleteTask(taskId);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao deletar tarefa'
+        };
+      }
+    });
+
+    // Obter sugestões de IA para tarefas
+    ipcMain.handle('get-task-suggestions', async () => {
+      try {
+        const result = await taskService.getTaskSuggestions();
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao obter sugestões'
+        };
+      }
+    });
+
+    // Obter estatísticas das tarefas
+    ipcMain.handle('get-task-stats', async () => {
+      try {
+        const stats = taskService.getTaskStats();
+        return { success: true, stats };
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao obter estatísticas'
+        };
+      }
+    });
+
+    // Limpar tarefas concluídas
+    ipcMain.handle('clear-completed-tasks', async () => {
+      try {
+        const result = taskService.clearCompletedTasks();
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao limpar tarefas'
+        };
+      }
+    });
+
+    // === HANDLERS DE REPOSITÓRIO DE CONHECIMENTO ===
+
+    // Adicionar item ao repositório de conhecimento
+    ipcMain.handle('add-knowledge-item', async (event, item: { title: string; content: string; type: string; tags: string[]; url?: string }) => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const result = await this.groqClient.addKnowledge(
+          item.title,
+          item.content,
+          item.type as any,
+          item.tags,
+          item.url
+        );
+        return { success: true, item: result };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Buscar no repositório de conhecimento
+    ipcMain.handle('search-knowledge', async (event, query: string, type?: string, limit?: number) => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const results = await this.groqClient.searchKnowledge(query, type as any, limit);
+        return { success: true, results };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Obter todos os itens de conhecimento
+    ipcMain.handle('get-all-knowledge', async (event, type?: string, limit?: number) => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const knowledgeService = this.groqClient.getKnowledgeService();
+        const items = await knowledgeService.getAllKnowledge(type as any, limit);
+        return { success: true, items };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Obter item específico de conhecimento
+    ipcMain.handle('get-knowledge-item', async (event, id: string) => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const knowledgeService = this.groqClient.getKnowledgeService();
+        const item = await knowledgeService.getKnowledgeItem(id);
+        return { success: true, item };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Atualizar item de conhecimento
+    ipcMain.handle('update-knowledge-item', async (event, id: string, updates: any) => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const knowledgeService = this.groqClient.getKnowledgeService();
+        const item = await knowledgeService.updateKnowledgeItem(id, updates);
+        return { success: true, item };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Remover item de conhecimento
+    ipcMain.handle('delete-knowledge-item', async (event, id: string) => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const knowledgeService = this.groqClient.getKnowledgeService();
+        const success = await knowledgeService.deleteKnowledgeItem(id);
+        return { success };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Obter estatísticas do repositório
+    ipcMain.handle('get-knowledge-stats', async () => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const knowledgeService = this.groqClient.getKnowledgeService();
+        const stats = await knowledgeService.getStats();
+        return { success: true, stats };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Obter todas as tags
+    ipcMain.handle('get-all-knowledge-tags', async () => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const knowledgeService = this.groqClient.getKnowledgeService();
+        const tags = await knowledgeService.getAllTags();
+        return { success: true, tags };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Salvar resumo de post com IA
+    ipcMain.handle('save-post-summary', async (event, title: string, content: string, url?: string, tags: string[] = []) => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const result = await this.groqClient.savePostSummaryWithAI(title, content, url, tags);
+        return { success: true, item: result };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Exportar base de conhecimento
+    ipcMain.handle('export-knowledge', async () => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const knowledgeService = this.groqClient.getKnowledgeService();
+        const items = await knowledgeService.exportKnowledge();
+        return { success: true, items };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Importar base de conhecimento
+    ipcMain.handle('import-knowledge', async (event, items: any[]) => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const knowledgeService = this.groqClient.getKnowledgeService();
+        await knowledgeService.importKnowledge(items);
+        return { success: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Limpar base de conhecimento
+    ipcMain.handle('clear-knowledge', async () => {
+      if (!this.groqClient) {
+        return { error: 'Chave Groq não configurada' };
+      }
+
+      try {
+        const knowledgeService = this.groqClient.getKnowledgeService();
+        await knowledgeService.clearKnowledge();
+        return { success: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // === HANDLERS DE TELA INTEIRA ===
+
+    // Alternar modo tela inteira
+    ipcMain.handle('toggle-fullscreen', async () => {
+      try {
+        const isFullScreen = this.mainWindow?.isFullScreen() || false;
+        this.mainWindow?.setFullScreen(!isFullScreen);
+        return {
+          success: true,
+          isFullScreen: !isFullScreen
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao alternar tela inteira'
+        };
+      }
+    });
+
+    // Obter status da tela inteira
+    ipcMain.handle('get-fullscreen-status', async () => {
+      try {
+        const isFullScreen = this.mainWindow?.isFullScreen() || false;
+        return {
+          success: true,
+          isFullScreen
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao obter status'
+        };
+      }
+    });
+
+    // Definir modo tela inteira
+    ipcMain.handle('set-fullscreen', async (event, fullscreen: boolean) => {
+      try {
+        this.mainWindow?.setFullScreen(fullscreen);
+        return {
+          success: true,
+          isFullScreen: fullscreen
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao definir tela inteira'
+        };
+      }
+    });
   }
 
   private startMonitoring() {
@@ -463,6 +919,37 @@ class CoPilotoDesktop {
     }
   }
 
+  private async startChatAPIServer() {
+    try {
+      let port = 3003;
+      let attempts = 0;
+      const maxAttempts = 10;
+
+      while (attempts < maxAttempts) {
+        try {
+          await this.chatAPIServer.start(port);
+          console.log(`✅ Chat API Server iniciado na porta ${port}`);
+          break;
+        } catch (error: any) {
+          if (error.code === 'EADDRINUSE') {
+            console.log(`❌ Porta ${port} em uso, tentando próxima...`);
+            port++;
+            attempts++;
+          } else {
+            console.error('❌ Erro ao iniciar Chat API Server:', error);
+            break;
+          }
+        }
+      }
+
+      if (attempts >= maxAttempts) {
+        console.error('❌ Não foi possível iniciar o Chat API Server após múltiplas tentativas');
+      }
+    } catch (error) {
+      console.error('❌ Erro crítico no Chat API Server:', error);
+    }
+  }
+
   private cleanup() {
     // Remover todos os atalhos globais registrados
     globalShortcut.unregisterAll();
@@ -474,6 +961,10 @@ class CoPilotoDesktop {
     
     if (this.commandPaletteServer) {
       this.commandPaletteServer.stop();
+    }
+
+    if (this.chatAPIServer) {
+      this.chatAPIServer.stop();
     }
   }
 }

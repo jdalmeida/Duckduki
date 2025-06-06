@@ -12,16 +12,16 @@
   position: relative;
   display: flex;
   align-items: center;
-  background: white;
-  border: 2px solid rgba(102, 126, 234, 0.2);
-  border-radius: 12px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
   padding: 4px;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: var(--transition-normal);
 }
 
 .input-wrapper:focus-within {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
 .command-input {
@@ -31,16 +31,16 @@
   padding: 12px 16px;
   font-size: 14px;
   background: transparent;
-  color: #2d3748;
+  color: var(--text-primary);
   resize: none;
 }
 
 .command-input::placeholder {
-  color: #a0aec0;
+  color: var(--text-muted);
 }
 
 .command-input.disabled {
-  color: #a0aec0;
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -59,7 +59,7 @@
 
 .voice-btn:hover:not(.disabled), 
 .submit-btn:hover:not(.disabled) {
-  background-color: rgba(102, 126, 234, 0.1);
+  background: var(--hover-overlay);
   transform: scale(1.05);
 }
 
@@ -75,8 +75,8 @@
 }
 
 .submit-btn:not(.disabled) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--text-inverse);
 }
 
 .quick-suggestions {
@@ -87,21 +87,22 @@
 }
 
 .suggestion-pill {
-  background: rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.2);
-  color: #667eea;
+  background: var(--bg-accent);
+  border: 1px solid var(--border-secondary);
+  color: var(--text-accent);
   padding: 6px 12px;
-  border-radius: 20px;
+  border-radius: var(--radius-full);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: var(--transition-normal);
   white-space: nowrap;
 }
 
 .suggestion-pill:hover:not(:disabled) {
-  background: rgba(102, 126, 234, 0.2);
+  background: var(--hover-overlay);
   transform: translateY(-1px);
+  border-color: var(--border-accent);
 }
 
 .suggestion-pill:disabled {
