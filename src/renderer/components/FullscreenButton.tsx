@@ -32,9 +32,16 @@ export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = 
       const result = await window.electronAPI.toggleFullscreen();
       if (result.success) {
         setIsFullscreen(result.isFullScreen);
+        console.log(`✅ Tela cheia ${result.isFullScreen ? 'ativada' : 'desativada'}`);
+      } else {
+        console.error('❌ Erro ao alternar tela inteira:', result.error);
+        // Verificar status atual após falha
+        setTimeout(checkFullscreenStatus, 500);
       }
     } catch (error) {
-      console.error('Erro ao alternar tela inteira:', error);
+      console.error('❌ Erro ao alternar tela inteira:', error);
+      // Verificar status atual após falha
+      setTimeout(checkFullscreenStatus, 500);
     }
   };
 

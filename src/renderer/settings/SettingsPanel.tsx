@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import './SettingsPanel.css';
+import { StorageTest } from '../components/StorageTest';
+import { StreamTest } from '../components/StreamTest';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -19,6 +21,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
   const [customHost, setCustomHost] = useState('');
   const [customPort, setCustomPort] = useState('993');
   const [customTls, setCustomTls] = useState(true);
+  const [showStorageTest, setShowStorageTest] = useState(false);
+  const [showStreamTest, setShowStreamTest] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -215,6 +219,26 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
         </div>
 
         <div className="setting-section">
+          <h3>Diagnóstico do Sistema</h3>
+          <p className="setting-description">
+            Teste o sistema de armazenamento e comunicação da IA para identificar problemas.
+          </p>
+          <button 
+            onClick={() => setShowStorageTest(true)}
+            className="save-btn"
+            style={{ marginRight: '12px' }}
+          >
+            🧪 Testar Armazenamento
+          </button>
+          <button 
+            onClick={() => setShowStreamTest(true)}
+            className="save-btn"
+          >
+            🌊 Testar Streaming IA
+          </button>
+        </div>
+
+        <div className="setting-section">
           <h3>Dados e Privacidade</h3>
           <p className="setting-description">
             Gerencie seus dados armazenados localmente.
@@ -232,6 +256,22 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
           </p>
         </div>
       </div>
+      
+      {showStorageTest && (
+        <StorageTest onClose={() => setShowStorageTest(false)} />
+      )}
+      
+      {showStreamTest && (
+        <div className="storage-test-overlay">
+          <div className="storage-test-modal">
+            <div className="storage-test-header">
+              <h2>🌊 Teste de Streaming IA</h2>
+              <button onClick={() => setShowStreamTest(false)} className="close-btn">✕</button>
+            </div>
+            <StreamTest />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

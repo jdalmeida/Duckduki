@@ -10,14 +10,15 @@ interface AIChatProps {
 export const AIChat: React.FC<AIChatProps> = ({ isVisible, onClose }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, status } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, status, error } = useChat({
     api: 'http://localhost:3003/api/chat',
     onError: (error) => {
       console.error('❌ [FRONTEND] Chat error:', error);
+      console.error('❌ [FRONTEND] Error stack:', error.stack);
       console.error('❌ [FRONTEND] Error details:', {
+        name: error.name,
         message: error.message,
-        stack: error.stack,
-        name: error.name
+        toString: error.toString()
       });
     },
     onFinish: (message, options) => {
@@ -26,29 +27,10 @@ export const AIChat: React.FC<AIChatProps> = ({ isVisible, onClose }) => {
       console.log('📊 [FRONTEND] Finish reason:', options?.finishReason);
     },
     onResponse: (response) => {
-      console.log('📡 [FRONTEND] Resposta recebida:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        url: response.url
-      });
+      console.log('📡 [FRONTEND] Response status:', response.status);
+      console.log('📡 [FRONTEND] Response headers:', Object.fromEntries(response.headers.entries()));
       if (!response.ok) {
-        console.error('❌ [FRONTEND] Response error:', response);
-      }
-    },
-    fetch: async (url, options) => {
-      console.log('🔍 [FRONTEND] Fazendo requisição:', { url, options });
-      try {
-        const response = await fetch(url, options);
-        console.log('📨 [FRONTEND] Response recebida:', {
-          status: response.status,
-          ok: response.ok,
-          headers: Object.fromEntries(response.headers.entries())
-        });
-        return response;
-      } catch (error) {
-        console.error('💥 [FRONTEND] Fetch error:', error);
-        throw error;
+        console.error('❌ [FRONTEND] Response not OK:', response.statusText);
       }
     }
   });
@@ -75,7 +57,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isVisible, onClose }) => {
             <span className="ai-chat-icon">🤖</span>
             <span>Duckduki AI Chat</span>
             <span className="ai-chat-status">
-              {isLoading ? '⚡ Pensando...' : '💬 Pronto'}
+              {status === 'streaming' ? '⚡ Pensando...' : '💬 Pronto'}
             </span>
           </div>
           <button className="ai-chat-close" onClick={onClose}>
@@ -133,7 +115,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isVisible, onClose }) => {
             </div>
           ))}
 
-          {isLoading && (
+          {status === 'streaming' && (
             <div className="ai-chat-message ai-chat-message-assistant">
               <div className="ai-chat-message-avatar">🤖</div>
               <div className="ai-chat-message-content">
@@ -158,7 +140,6 @@ export const AIChat: React.FC<AIChatProps> = ({ isVisible, onClose }) => {
 
         <form className="ai-chat-form" onSubmit={(e) => {
           console.log('🚀 [FRONTEND] Enviando mensagem:', input);
-          console.log('📈 [FRONTEND] Status atual:', status);
           handleSubmit(e);
         }}>
           <div className="ai-chat-input-container">
@@ -167,29 +148,16 @@ export const AIChat: React.FC<AIChatProps> = ({ isVisible, onClose }) => {
               value={input}
               onChange={handleInputChange}
               placeholder="Digite sua mensagem..."
-              disabled={isLoading}
+              disabled={status === 'streaming'}
             />
             <button
               type="submit"
               className="ai-chat-send"
-              disabled={isLoading || !input.trim()}
+              disabled={status === 'streaming' || !input.trim()}
             >
-              {status === 'submitted' && '📤'}
-              {status === 'streaming' && '⚡'}
-              {(status === 'ready' || !status) && '📤'}
-              {status === 'error' && '❌'}
-              {isLoading && !status && '⏳'}
+              {status === 'streaming' ? '⏳' : '📤'}
             </button>
           </div>
-          
-          {status && status !== 'ready' && (
-            <div className="ai-chat-status-indicator">
-              <span>Status: {status}</span>
-              {status === 'submitted' && <span> - Enviando...</span>}
-              {status === 'streaming' && <span> - Recebendo resposta...</span>}
-              {status === 'error' && <span> - Erro na comunicação</span>}
-            </div>
-          )}
           
           <div className="ai-chat-tools-indicator">
             <span className="ai-chat-tools-icon">🛠️</span>

@@ -1,0 +1,232 @@
+.storage-test-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.storage-test-modal {
+  background: var(--bg-primary);
+  border-radius: 16px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-color);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.storage-test-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-secondary);
+}
+
+.storage-test-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.storage-test-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.description {
+  margin: 0 0 20px 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.test-actions {
+  margin-bottom: 24px;
+}
+
+.test-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.test-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.test-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.test-results {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.test-results h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.test-results h4 {
+  margin: 16px 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+}
+
+.result-item strong {
+  color: var(--text-primary);
+}
+
+.result-item .success {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.result-item .error {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.result-details ul,
+.recommendations ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text-secondary);
+}
+
+.result-details li,
+.recommendations li {
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+
+.result-details strong {
+  color: var(--text-primary);
+}
+
+.recommendations {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f0f8ff;
+  border: 1px solid #b3d4fc;
+  border-radius: 8px;
+}
+
+.recommendations h4 {
+  margin-top: 0;
+  color: #2d3748;
+}
+
+.recommendations ul {
+  color: #4a5568;
+}
+
+.error-details {
+  margin-top: 16px;
+  padding: 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+}
+
+.error-details h4 {
+  margin-top: 0;
+  color: #b91c1c;
+}
+
+.error-details code {
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #dc2626;
+  display: block;
+  margin-top: 8px;
+  border: 1px solid #fca5a5;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--text-primary);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .recommendations {
+  background: rgba(16, 42, 67, 0.5);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+[data-theme="dark"] .recommendations h4 {
+  color: var(--text-primary);
+}
+
+[data-theme="dark"] .recommendations ul {
+  color: var(--text-secondary);
+}
+
+[data-theme="dark"] .error-details {
+  background: rgba(127, 29, 29, 0.2);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+[data-theme="dark"] .error-details h4 {
+  color: #f87171;
+}
+
+[data-theme="dark"] .error-details code {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #fca5a5;
+} 

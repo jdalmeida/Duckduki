@@ -21,6 +21,7 @@ export interface ElectronAPI {
   // Configurações
   setGroqKey: (apiKey: string) => Promise<any>;
   hasGroqKey: () => Promise<any>;
+  testStorage: () => Promise<any>;
   clearData: () => Promise<any>;
   
   // Configurações de Email
@@ -109,6 +110,9 @@ const electronAPI: ElectronAPI = {
   
   hasGroqKey: () => 
     ipcRenderer.invoke('has-groq-key'),
+  
+  testStorage: () =>
+    ipcRenderer.invoke('test-storage'),
   
   clearData: () => 
     ipcRenderer.invoke('clear-data'),

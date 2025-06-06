@@ -365,7 +365,8 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
       const result = await this.feedService.getAllFeeds();
       return {
         success: true,
-        message: `📰 Feeds de tecnologia obtidos com sucesso`
+        message: `📰 Feeds de tecnologia obtidos com sucesso`,
+        data: result
       };
     } catch (error) {
       return {
@@ -380,7 +381,8 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
       const result = await this.feedService.getAllFeeds();
       return {
         success: true,
-        message: `🔍 Busca por "${keywords}" realizada com sucesso`
+        message: `🔍 Busca por "${keywords}" realizada com sucesso`,
+        data: result
       };
     } catch (error) {
       return {
@@ -401,7 +403,7 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
       });
       return {
         success: true,
-        message: `📝 Nota "${title}" salva no repositório de conhecimento`
+        message: `📝 Nota "${title}" salva no repositório de conhecimento`,
       };
     } catch (error) {
       return {
@@ -416,7 +418,8 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
       const results = await this.knowledgeService.searchKnowledge(query, type as any);
       return {
         success: true,
-        message: `🔍 Encontrados ${results.length} resultados para "${query}"`
+        message: `🔍 Encontrados ${results.length} resultados para "${query}"`,
+        data: results
       };
     } catch (error) {
       return {
@@ -433,7 +436,12 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
       const activeApp = history[0];
       return {
         success: true,
-        message: `💻 Sistema: CPU e RAM OK\n📱 App ativo: ${activeApp?.title || 'Nenhum'}`
+        message: `💻 Sistema: CPU e RAM OK\n📱 App ativo: ${activeApp?.title || 'Nenhum'}`,
+        data: {
+          status,
+          history,
+          activeApp
+        }
       };
     } catch (error) {
       return {

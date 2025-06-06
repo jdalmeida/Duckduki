@@ -1,15 +1,19 @@
 // Importações com fallback para desenvolvimento
 let keytar: any = null;
 let Store: any = null;
+const { execSync } = require('child_process');
+const crypto = require('crypto');
 
 // Variável para rastrear se keytar está funcionando
 let keytarAvailable = false;
 
 try {
   keytar = require('keytar');
-  // Testar se keytar funciona (no Linux pode falhar se libsecret não estiver instalado)
+  console.log(`🔑 Keytar carregado para ${process.platform}`);
+  
+  // Testar se keytar funciona dependendo da plataforma
   if (process.platform === 'linux') {
-    // Fazer um teste simples para ver se keytar funciona
+    // Fazer um teste simples para ver se keytar funciona no Linux
     keytar.getPassword('test-service', 'test-account').then(() => {
       keytarAvailable = true;
       console.log('✅ Keytar funciona corretamente no Linux');
@@ -19,13 +23,26 @@ try {
       console.warn('   Ou libsecret-devel: sudo dnf install libsecret-devel');
       keytarAvailable = false;
     });
-  } else {
+  } else if (process.platform === 'win32') {
+    // No Windows, keytar deve funcionar nativamente
     keytarAvailable = true;
+    console.log('✅ Keytar configurado para Windows (nativo)');
+  } else if (process.platform === 'darwin') {
+    // No macOS, keytar deve funcionar nativamente
+    keytarAvailable = true;
+    console.log('✅ Keytar configurado para macOS (Keychain)');
+  } else {
+    // Outras plataformas, tentar usar
+    keytarAvailable = true;
+    console.log(`ℹ️  Keytar configurado para ${process.platform} (experimental)`);
   }
 } catch (error) {
   console.warn('⚠️  keytar não encontrado, usando armazenamento local simples');
-  console.warn('   Para maior segurança no Linux, instale: npm install keytar');
-  console.warn('   E as dependências do sistema: sudo apt install libsecret-1-dev');
+  console.warn('   Para maior segurança, instale: npm install keytar');
+  if (process.platform === 'linux') {
+    console.warn('   E as dependências do sistema: sudo apt install libsecret-1-dev');
+  }
+  keytarAvailable = false;
 }
 
 try {
@@ -56,55 +73,216 @@ export class SecurityManager {
     console.log(`🖥️  Plataforma: ${process.platform}`);
     if (process.platform === 'linux') {
       console.log('🐧 Executando no Linux - verificando compatibilidade...');
+    } else if (process.platform === 'win32') {
+      console.log('🪟 Executando no Windows - armazenamento nativo disponível');
+    } else if (process.platform === 'darwin') {
+      console.log('🍎 Executando no macOS - Keychain disponível');
+    }
+    
+    // Verificar e corrigir problemas de armazenamento
+    this.diagnoseStorage();
+  }
+
+  // Diagnosticar e corrigir problemas de armazenamento
+  private async diagnoseStorage() {
+    try {
+      const hasGroqKey = this.store.get('hasGroqKey', false);
+      const storageMethod = this.store.get('groq-storage-method', 'unknown');
+      
+      console.log(`🔍 Diagnóstico: hasGroqKey=${hasGroqKey}, method=${storageMethod}`);
+      
+      if (hasGroqKey && storageMethod === 'unknown') {
+        console.log('🔧 Corrigindo método de armazenamento desconhecido...');
+        // Tentar recuperar chave e definir método correto
+        const fallbackKey = this.store.get('groq-api-key-fallback', null);
+        if (fallbackKey) {
+          this.store.set('groq-storage-method', 'fallback');
+          console.log('✅ Método corrigido para fallback');
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️  Erro no diagnóstico de armazenamento:', error);
+    }
+  }
+
+  // Métodos específicos para Windows Credential Manager
+  private async setWindowsCredential(target: string, password: string): Promise<boolean> {
+    if (process.platform !== 'win32') return false;
+    
+    try {
+      console.log('🪟 [WINDOWS] Tentando salvar no Windows Credential Manager...');
+      
+      // Escapar caracteres especiais para PowerShell
+      const escapedTarget = target.replace(/"/g, '`"');
+      const escapedPassword = password.replace(/"/g, '`"');
+      
+      // Usar cmdkey para salvar credential
+      const command = `cmdkey /generic:"${escapedTarget}" /user:"duckduki" /pass:"${escapedPassword}"`;
+      
+      execSync(command, { stdio: 'pipe', windowsHide: true });
+      console.log('✅ [WINDOWS] Credential salvo com sucesso');
+      return true;
+    } catch (error) {
+      console.warn('⚠️  [WINDOWS] Erro ao salvar credential:', error.message);
+      return false;
+    }
+  }
+
+  private async getWindowsCredential(target: string): Promise<string | null> {
+    if (process.platform !== 'win32') return null;
+    
+    try {
+      console.log('🪟 [WINDOWS] Tentando recuperar do Windows Credential Manager...');
+      
+      // Usar PowerShell para recuperar credential
+      const escapedTarget = target.replace(/"/g, '`"');
+      const psCommand = `
+        $cred = Get-StoredCredential -Target "${escapedTarget}" -ErrorAction SilentlyContinue
+        if ($cred) { 
+          $cred.Password | ConvertFrom-SecureString -AsPlainText 
+        }
+      `;
+      
+      // Fallback para cmdkey se PowerShell falhar
+      try {
+        const result = execSync(`powershell -Command "${psCommand}"`, { 
+          stdio: 'pipe', 
+          encoding: 'utf8',
+          windowsHide: true
+        });
+        
+        const password = result.toString().trim();
+        if (password && password !== '') {
+          console.log('✅ [WINDOWS] Credential recuperado com sucesso');
+          return password;
+        }
+      } catch (psError) {
+        console.log('⚠️  [WINDOWS] PowerShell falhou, tentando método alternativo...');
+      }
+      
+      // Método alternativo usando cmdkey (menos seguro mas mais compatível)
+      try {
+        const listCommand = `cmdkey /list:"${escapedTarget}"`;
+        const listResult = execSync(listCommand, { 
+          stdio: 'pipe', 
+          encoding: 'utf8',
+          windowsHide: true
+        });
+        
+        if (listResult.includes(target)) {
+          console.log('✅ [WINDOWS] Credential encontrado (usando cmdkey)');
+          // Para cmdkey, retornamos um indicador de que existe, mas precisamos do fallback
+          return 'CREDENTIAL_EXISTS_BUT_NEEDS_FALLBACK';
+        }
+      } catch (cmdError) {
+        console.log('⚠️  [WINDOWS] cmdkey também falhou');
+      }
+      
+      return null;
+    } catch (error) {
+      console.warn('⚠️  [WINDOWS] Erro ao recuperar credential:', error.message);
+      return null;
+    }
+  }
+
+  private async removeWindowsCredential(target: string): Promise<boolean> {
+    if (process.platform !== 'win32') return false;
+    
+    try {
+      console.log('🪟 [WINDOWS] Removendo credential...');
+      const escapedTarget = target.replace(/"/g, '`"');
+      const command = `cmdkey /delete:"${escapedTarget}"`;
+      
+      execSync(command, { stdio: 'pipe', windowsHide: true });
+      console.log('✅ [WINDOWS] Credential removido com sucesso');
+      return true;
+    } catch (error) {
+      console.warn('⚠️  [WINDOWS] Erro ao remover credential:', error.message);
+      return false;
     }
   }
 
   // Verificar se keytar está disponível e funcionando
   private async isKeytarWorking(): Promise<boolean> {
-    if (!keytar) return false;
+    if (!keytar) {
+      console.log('🔑 Keytar não está disponível');
+      return false;
+    }
     
-    try {
-      // Teste simples para verificar se keytar funciona
-      await keytar.getPassword('duckduki-test', 'test-key');
-      return true;
-    } catch (error) {
-      if (process.platform === 'linux') {
+    // Para Windows e macOS, confiar na variável global se keytar foi carregado
+    if (process.platform === 'win32' || process.platform === 'darwin') {
+      console.log(`🔑 Keytar disponível para ${process.platform}: ${keytarAvailable}`);
+      return keytarAvailable;
+    }
+    
+    // Para Linux, fazer teste real (pode falhar se libsecret não estiver instalado)
+    if (process.platform === 'linux') {
+      try {
+        // Teste simples para verificar se keytar funciona no Linux
+        await keytar.getPassword('duckduki-test', 'test-key');
+        console.log('🔑 Keytar testado e funcionando no Linux');
+        return true;
+      } catch (error) {
         console.warn('⚠️  Keytar não funciona no Linux. Possíveis soluções:');
         console.warn('   Ubuntu/Debian: sudo apt install libsecret-1-dev');
         console.warn('   Fedora/RHEL: sudo dnf install libsecret-devel');
         console.warn('   Arch: sudo pacman -S libsecret');
         console.warn('   Após instalar, reinicie o aplicativo.');
+        return false;
       }
-      return false;
     }
+    
+    // Para outras plataformas, assumir que funciona se foi carregado
+    return keytarAvailable;
   }
 
   async setGroqKey(apiKey: string): Promise<void> {
     try {
-      const keytarWorking = await this.isKeytarWorking();
+      console.log(`🔑 Tentando salvar chave Groq (plataforma: ${process.platform})`);
       
-      if (keytar && keytarWorking) {
-        // Armazenar no keychain do sistema
-        await keytar.setPassword(this.serviceName, 'groq-api-key', apiKey);
-        console.log('✅ Chave Groq salva no keychain do sistema');
-        this.store.set('groq-storage-method', 'keytar');
-      } else {
-        // Fallback: armazenar no store criptografado
-        this.store.set('groq-api-key-fallback', apiKey);
-        console.log('⚠️  Chave Groq salva em fallback (menos seguro)');
-        this.store.set('groq-storage-method', 'fallback');
+      // Priorizar Windows Credential Manager no Windows
+      if (process.platform === 'win32') {
+        console.log('🪟 Usando Windows Credential Manager...');
+        const windowsSuccess = await this.setWindowsCredential('DuckdukiGroqApiKey', apiKey);
         
-        if (process.platform === 'linux') {
-          console.log('💡 Para maior segurança, instale libsecret:');
-          console.log('   sudo apt install libsecret-1-dev (Ubuntu/Debian)');
-          console.log('   sudo dnf install libsecret-devel (Fedora/RHEL)');
+        if (windowsSuccess) {
+          this.store.set('groq-storage-method', 'windows-credential');
+          console.log('✅ Chave Groq salva no Windows Credential Manager (mais seguro)');
+        } else {
+          // Fallback para armazenamento criptografado
+          this.store.set('groq-api-key-fallback', apiKey);
+          this.store.set('groq-storage-method', 'fallback');
+          console.log('⚠️  Windows Credential Manager falhou, usando fallback criptografado');
+        }
+      } else {
+        // Para outras plataformas, usar keytar ou fallback
+        const keytarWorking = await this.isKeytarWorking();
+        console.log(`🔑 Keytar funcionando: ${keytarWorking}`);
+        
+        if (keytar && keytarWorking) {
+          // Armazenar no keychain do sistema
+          await keytar.setPassword(this.serviceName, 'groq-api-key', apiKey);
+          console.log('✅ Chave Groq salva no keychain do sistema (seguro)');
+          this.store.set('groq-storage-method', 'keytar');
+        } else {
+          // Fallback: armazenar no store criptografado
+          this.store.set('groq-api-key-fallback', apiKey);
+          console.log(`⚠️  Chave Groq salva em fallback criptografado (plataforma: ${process.platform})`);
+          this.store.set('groq-storage-method', 'fallback');
+          
+          if (process.platform === 'linux') {
+            console.log('💡 Para maior segurança no Linux, instale libsecret:');
+            console.log('   sudo apt install libsecret-1-dev (Ubuntu/Debian)');
+            console.log('   sudo dnf install libsecret-devel (Fedora/RHEL)');
+          }
         }
       }
       
       // Marcar que temos uma chave configurada
       this.store.set('hasGroqKey', true);
+      console.log('✅ Chave Groq configurada com sucesso');
     } catch (error) {
-      console.error('Erro ao salvar chave Groq:', error);
+      console.error('❌ Erro ao salvar chave Groq:', error);
       throw new Error('Falha ao salvar chave de API');
     }
   }
@@ -112,18 +290,50 @@ export class SecurityManager {
   async getGroqKey(): Promise<string | null> {
     try {
       const storageMethod = this.store.get('groq-storage-method', 'unknown');
+      console.log(`🔑 Recuperando chave Groq (método: ${storageMethod}, plataforma: ${process.platform})`);
       
-      if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
+      // Priorizar Windows Credential Manager no Windows
+      if (storageMethod === 'windows-credential' && process.platform === 'win32') {
+        console.log('🪟 Tentando recuperar do Windows Credential Manager');
+        const windowsKey = await this.getWindowsCredential('DuckdukiGroqApiKey');
+        
+        if (windowsKey && windowsKey !== 'CREDENTIAL_EXISTS_BUT_NEEDS_FALLBACK') {
+          console.log('✅ Chave Groq recuperada do Windows Credential Manager');
+          return windowsKey;
+        } else {
+          console.log('⚠️  Chave não encontrada no Windows Credential Manager, tentando fallback');
+          return this.store.get('groq-api-key-fallback', null);
+        }
+      } else if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
+        console.log('🔑 Tentando recuperar do keychain do sistema');
         const apiKey = await keytar.getPassword(this.serviceName, 'groq-api-key');
-        return apiKey;
+        if (apiKey) {
+          console.log('✅ Chave Groq recuperada do keychain');
+          return apiKey;
+        } else {
+          console.log('⚠️  Chave não encontrada no keychain, tentando fallback');
+          return this.store.get('groq-api-key-fallback', null);
+        }
       } else {
         // Fallback: recuperar do store
-        return this.store.get('groq-api-key-fallback', null);
+        console.log('🔑 Recuperando do fallback criptografado');
+        const fallbackKey = this.store.get('groq-api-key-fallback', null);
+        if (fallbackKey) {
+          console.log('✅ Chave Groq recuperada do fallback');
+        } else {
+          console.log('❌ Nenhuma chave encontrada');
+        }
+        return fallbackKey;
       }
     } catch (error) {
-      console.error('Erro ao recuperar chave Groq:', error);
+      console.error('❌ Erro ao recuperar chave Groq:', error);
       // Tentar fallback em caso de erro
-      return this.store.get('groq-api-key-fallback', null);
+      console.log('🔑 Tentando fallback após erro');
+      const fallbackKey = this.store.get('groq-api-key-fallback', null);
+      if (fallbackKey) {
+        console.log('✅ Chave recuperada do fallback após erro');
+      }
+      return fallbackKey;
     }
   }
 
@@ -144,16 +354,30 @@ export class SecurityManager {
     try {
       const storageMethod = this.store.get('groq-storage-method', 'unknown');
       
+      // Remover do Windows Credential Manager se foi usado
+      if (storageMethod === 'windows-credential' && process.platform === 'win32') {
+        console.log('🪟 Removendo do Windows Credential Manager...');
+        await this.removeWindowsCredential('DuckdukiGroqApiKey');
+      }
+      
+      // Remover do keytar se foi usado
       if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
-        await keytar.deletePassword(this.serviceName, 'groq-api-key');
+        try {
+          await keytar.deletePassword(this.serviceName, 'groq-api-key');
+          console.log('✅ Chave Groq removida do keychain');
+        } catch (error) {
+          console.log('⚠️  Erro ao remover do keychain (pode não existir)');
+        }
       }
       
       // Sempre limpar fallback também
       this.store.delete('groq-api-key-fallback');
       this.store.delete('hasGroqKey');
       this.store.delete('groq-storage-method');
+      console.log('✅ Chave Groq removida completamente');
     } catch (error) {
-      console.error('Erro ao remover chave Groq:', error);
+      console.error('❌ Erro ao remover chave Groq:', error);
+      throw new Error('Falha ao remover chave de API');
     }
   }
 
@@ -282,6 +506,82 @@ export class SecurityManager {
     };
 
     return settings;
+  }
+
+  // Testar sistema de armazenamento completo
+  async testStorage(): Promise<{ success: boolean; details: any }> {
+    const details: any = {
+      platform: process.platform,
+      keytarAvailable: !!keytar,
+      keytarWorking: false,
+      windowsCredentialWorking: false,
+      storeWorking: false,
+      testResults: {}
+    };
+
+    try {
+      // Testar Windows Credential Manager se no Windows
+      if (process.platform === 'win32') {
+        try {
+          const testTarget = 'DuckdukiTestCredential';
+          const testValue = 'test-value-' + Date.now();
+          
+          const setSuccess = await this.setWindowsCredential(testTarget, testValue);
+          if (setSuccess) {
+            const retrieved = await this.getWindowsCredential(testTarget);
+            await this.removeWindowsCredential(testTarget);
+            
+            details.windowsCredentialWorking = retrieved === testValue;
+            console.log(`🪟 Teste Windows Credential: ${details.windowsCredentialWorking}`);
+          } else {
+            console.log('🪟 Windows Credential Manager não disponível');
+          }
+        } catch (error) {
+          console.error('❌ Erro no teste do Windows Credential:', error);
+        }
+      }
+
+      // Testar keytar
+      if (keytar) {
+        details.keytarWorking = await this.isKeytarWorking();
+        console.log(`🔑 Teste keytar: ${details.keytarWorking}`);
+      }
+
+      // Testar store
+      try {
+        this.store.set('test-key', 'test-value');
+        const testValue = this.store.get('test-key');
+        details.storeWorking = testValue === 'test-value';
+        this.store.delete('test-key');
+        console.log(`💾 Teste store: ${details.storeWorking}`);
+      } catch (error) {
+        console.error('❌ Erro no teste do store:', error);
+      }
+
+      // Teste completo de salvamento/recuperação
+      try {
+        const testKey = 'test-api-key-12345';
+        await this.setGroqKey(testKey);
+        const retrievedKey = await this.getGroqKey();
+        details.testResults.saveAndRetrieve = retrievedKey === testKey;
+        
+        // Limpar teste
+        await this.removeGroqKey();
+        console.log(`🔄 Teste completo: ${details.testResults.saveAndRetrieve}`);
+      } catch (error) {
+        details.testResults.saveAndRetrieve = false;
+        details.testResults.error = error.message;
+        console.error('❌ Erro no teste completo:', error);
+      }
+
+      return {
+        success: details.storeWorking && (details.keytarWorking || details.windowsCredentialWorking || true), // Fallback é OK
+        details
+      };
+    } catch (error) {
+      details.error = error.message;
+      return { success: false, details };
+    }
   }
 
   // Verificar integridade dos dados

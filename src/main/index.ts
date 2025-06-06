@@ -154,7 +154,7 @@ class CoPilotoDesktop {
       height: 600,
       show: false,
       frame: false,
-      resizable: false,
+      resizable: true, // Permitir redimensionamento para funcionar em tela cheia no Windows
       alwaysOnTop: true,
       webPreferences: {
         nodeIntegration: false,
@@ -207,6 +207,36 @@ class CoPilotoDesktop {
 
     this.mainWindow.on('closed', () => {
       this.mainWindow = null;
+    });
+
+    // Controlar redimensionamento para manter tamanho fixo quando não em tela cheia
+    this.mainWindow.on('will-resize', (event, newBounds) => {
+      if (!this.mainWindow?.isFullScreen()) {
+        // Manter tamanho fixo quando não em tela cheia
+        event.preventDefault();
+      }
+    });
+
+    // Eventos de tela cheia para Windows
+    this.mainWindow.on('enter-full-screen', () => {
+      console.log('🖥️  Entrou em tela cheia');
+      if (process.platform === 'win32') {
+        // No Windows, garantir que funciona corretamente
+        this.mainWindow?.setResizable(true);
+      }
+    });
+
+    this.mainWindow.on('leave-full-screen', () => {
+      console.log('🖥️  Saiu da tela cheia');
+      if (process.platform === 'win32') {
+        // Restaurar tamanho original no Windows
+        setTimeout(() => {
+          if (this.mainWindow && !this.mainWindow.isFullScreen()) {
+            this.mainWindow.setSize(400, 600);
+            this.positionWindow();
+          }
+        }, 100);
+      }
     });
   }
 
@@ -414,6 +444,19 @@ class CoPilotoDesktop {
     ipcMain.handle('has-groq-key', async () => {
       const hasKey = await this.securityManager.hasGroqKey();
       return { hasKey };
+    });
+
+    // Testar sistema de armazenamento
+    ipcMain.handle('test-storage', async () => {
+      try {
+        const result = await this.securityManager.testStorage();
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          details: { error: error.message } 
+        };
+      }
     });
 
     // Limpar dados
@@ -820,13 +863,35 @@ class CoPilotoDesktop {
     // Alternar modo tela inteira
     ipcMain.handle('toggle-fullscreen', async () => {
       try {
-        const isFullScreen = this.mainWindow?.isFullScreen() || false;
-        this.mainWindow?.setFullScreen(!isFullScreen);
+        if (!this.mainWindow) {
+          return {
+            success: false,
+            error: 'Janela principal não existe'
+          };
+        }
+
+        const isFullScreen = this.mainWindow.isFullScreen() || false;
+        console.log(`🖥️  Alternando tela cheia: ${isFullScreen} -> ${!isFullScreen} (Windows: ${process.platform === 'win32'})`);
+        
+        // Para Windows, garantir que a janela pode ser redimensionada
+        if (process.platform === 'win32' && !isFullScreen) {
+          this.mainWindow.setResizable(true);
+        }
+        
+        this.mainWindow.setFullScreen(!isFullScreen);
+        
+        // Aguardar um pouco para a mudança de estado
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const newFullScreenState = this.mainWindow.isFullScreen();
+        console.log(`✅ Novo estado da tela cheia: ${newFullScreenState}`);
+        
         return {
           success: true,
-          isFullScreen: !isFullScreen
+          isFullScreen: newFullScreenState
         };
       } catch (error) {
+        console.error('❌ Erro ao alternar tela inteira:', error);
         return {
           success: false,
           error: error.message || 'Erro ao alternar tela inteira'
@@ -853,12 +918,34 @@ class CoPilotoDesktop {
     // Definir modo tela inteira
     ipcMain.handle('set-fullscreen', async (event, fullscreen: boolean) => {
       try {
-        this.mainWindow?.setFullScreen(fullscreen);
+        if (!this.mainWindow) {
+          return {
+            success: false,
+            error: 'Janela principal não existe'
+          };
+        }
+
+        console.log(`🖥️  Definindo tela cheia: ${fullscreen} (Windows: ${process.platform === 'win32'})`);
+        
+        // Para Windows, garantir que a janela pode ser redimensionada antes de entrar em tela cheia
+        if (process.platform === 'win32' && fullscreen) {
+          this.mainWindow.setResizable(true);
+        }
+        
+        this.mainWindow.setFullScreen(fullscreen);
+        
+        // Aguardar um pouco para a mudança de estado
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const actualFullScreenState = this.mainWindow.isFullScreen();
+        console.log(`✅ Estado atual da tela cheia: ${actualFullScreenState}`);
+        
         return {
           success: true,
-          isFullScreen: fullscreen
+          isFullScreen: actualFullScreenState
         };
       } catch (error) {
+        console.error('❌ Erro ao definir tela inteira:', error);
         return {
           success: false,
           error: error.message || 'Erro ao definir tela inteira'
