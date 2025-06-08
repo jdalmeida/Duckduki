@@ -141,7 +141,7 @@ export class ProcessMonitor {
     
     // Verificar desenvolvimento mais específico
     if ((name.includes('chrome') || name.includes('node')) && 
-        (title.includes('localhost:3000') || title.includes('duckduki') || title.includes('vite'))) {
+        (title.includes('localhost:3003') || title.includes('duckduki') || title.includes('vite'))) {
       console.log(`🚫 Filtrado (Dev): ${appName} - ${appTitle}`);
       return true;
     }

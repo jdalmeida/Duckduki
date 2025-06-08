@@ -50,10 +50,19 @@ export interface ElectronAPI {
   getTaskStats: () => Promise<any>;
   clearCompletedTasks: () => Promise<any>;
   
+  // Controle de tempo das tarefas
+  startTaskTimer: (taskId: string) => Promise<any>;
+  pauseTaskTimer: (taskId: string) => Promise<any>;
+  stopTaskTimer: (taskId: string) => Promise<any>;
+  addTimeSessionNote: (taskId: string, sessionId: string, notes: string) => Promise<any>;
+  getTaskTimeStats: (taskId: string) => Promise<any>;
+  
   // Tela inteira
   toggleFullscreen: () => Promise<any>;
   getFullscreenStatus: () => Promise<any>;
   setFullscreen: (fullscreen: boolean) => Promise<any>;
+  forceSpotlightMode: () => Promise<any>;
+  closeSpotlightMode: () => Promise<any>;
   
   // Repositório de Conhecimento
   addKnowledgeItem: (item: { title: string; content: string; type: string; tags: string[]; url?: string }) => Promise<any>;
@@ -68,6 +77,12 @@ export interface ElectronAPI {
   exportKnowledge: () => Promise<any>;
   importKnowledge: (items: any[]) => Promise<any>;
   clearKnowledge: () => Promise<any>;
+  
+  // Inicialização Automática
+  enableAutoLaunch: () => Promise<any>;
+  disableAutoLaunch: () => Promise<any>;
+  toggleAutoLaunch: () => Promise<any>;
+  getAutoLaunchStatus: () => Promise<any>;
 }
 
 const electronAPI: ElectronAPI = {
@@ -177,6 +192,22 @@ const electronAPI: ElectronAPI = {
   clearCompletedTasks: () => 
     ipcRenderer.invoke('clear-completed-tasks'),
   
+  // Controle de tempo das tarefas
+  startTaskTimer: (taskId: string) => 
+    ipcRenderer.invoke('start-task-timer', taskId),
+  
+  pauseTaskTimer: (taskId: string) => 
+    ipcRenderer.invoke('pause-task-timer', taskId),
+  
+  stopTaskTimer: (taskId: string) => 
+    ipcRenderer.invoke('stop-task-timer', taskId),
+  
+  addTimeSessionNote: (taskId: string, sessionId: string, notes: string) => 
+    ipcRenderer.invoke('add-time-session-note', taskId, sessionId, notes),
+  
+  getTaskTimeStats: (taskId: string) => 
+    ipcRenderer.invoke('get-task-time-stats', taskId),
+  
   // Tela inteira
   toggleFullscreen: () => 
     ipcRenderer.invoke('toggle-fullscreen'),
@@ -186,6 +217,12 @@ const electronAPI: ElectronAPI = {
   
   setFullscreen: (fullscreen: boolean) => 
     ipcRenderer.invoke('set-fullscreen', fullscreen),
+  
+  forceSpotlightMode: () => 
+    ipcRenderer.invoke('force-spotlight-mode'),
+  
+  closeSpotlightMode: () => 
+    ipcRenderer.invoke('close-spotlight-mode'),
   
   // Repositório de Conhecimento
   addKnowledgeItem: (item: { title: string; content: string; type: string; tags: string[]; url?: string }) =>
@@ -222,7 +259,20 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('import-knowledge', items),
   
   clearKnowledge: () =>
-    ipcRenderer.invoke('clear-knowledge')
+    ipcRenderer.invoke('clear-knowledge'),
+  
+  // Inicialização Automática
+  enableAutoLaunch: () =>
+    ipcRenderer.invoke('enable-auto-launch'),
+  
+  disableAutoLaunch: () =>
+    ipcRenderer.invoke('disable-auto-launch'),
+  
+  toggleAutoLaunch: () =>
+    ipcRenderer.invoke('toggle-auto-launch'),
+  
+  getAutoLaunchStatus: () =>
+    ipcRenderer.invoke('get-auto-launch-status')
 };
 
 // Expor API para o renderer de forma segura

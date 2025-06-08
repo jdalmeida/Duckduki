@@ -19,7 +19,7 @@ export class ChatAPIServer {
 
   private setupMiddleware() {
     this.app.use(cors({
-      origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'file://', 'app://'],
+      origin: ['http://localhost:3003', 'http://127.0.0.1:3003', 'file://', 'app://'],
       methods: ['GET', 'POST', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Cache-Control'],
       exposedHeaders: ['Content-Type', 'Cache-Control', 'Connection'],
@@ -269,6 +269,101 @@ export class ChatAPIServer {
               } catch (error) {
                 console.error('❌ [TOOL] Erro em getSystemStatus:', error);
                 return 'Erro ao obter status do sistema: ' + error.message;
+              }
+            }
+          },
+          updateTaskStatus: {
+            description: 'Atualizar status de uma tarefa',
+            parameters: z.object({
+              taskId: z.string().describe('ID da tarefa'),
+              status: z.enum(['pendente', 'em_progresso', 'concluida', 'cancelada']).describe('Novo status')
+            }),
+            execute: async (args) => {
+              try {
+                console.log('📋 [TOOL] Executando updateTaskStatus:', args);
+                const result = await this.executeUpdateTaskStatus(args.taskId, args.status);
+                console.log('✅ [TOOL] updateTaskStatus executado com sucesso');
+                return result || 'Status da tarefa atualizado com sucesso';
+              } catch (error) {
+                console.error('❌ [TOOL] Erro em updateTaskStatus:', error);
+                return 'Erro ao atualizar status da tarefa: ' + error.message;
+              }
+            }
+          },
+          deleteTask: {
+            description: 'Deletar uma tarefa',
+            parameters: z.object({
+              taskId: z.string().describe('ID da tarefa a ser deletada')
+            }),
+            execute: async (args) => {
+              try {
+                console.log('🗑️ [TOOL] Executando deleteTask:', args);
+                const result = await this.executeDeleteTask(args.taskId);
+                console.log('✅ [TOOL] deleteTask executado com sucesso');
+                return result || 'Tarefa deletada com sucesso';
+              } catch (error) {
+                console.error('❌ [TOOL] Erro em deleteTask:', error);
+                return 'Erro ao deletar tarefa: ' + error.message;
+              }
+            }
+          },
+          getTaskStats: {
+            description: 'Obter estatísticas das tarefas',
+            parameters: z.object({}),
+            execute: async () => {
+              try {
+                console.log('📊 [TOOL] Executando getTaskStats...');
+                const result = await this.executeGetTaskStats();
+                console.log('✅ [TOOL] getTaskStats executado com sucesso');
+                return result || 'Estatísticas obtidas com sucesso';
+              } catch (error) {
+                console.error('❌ [TOOL] Erro em getTaskStats:', error);
+                return 'Erro ao obter estatísticas: ' + error.message;
+              }
+            }
+          },
+          getTaskSuggestions: {
+            description: 'Obter sugestões de otimização das tarefas',
+            parameters: z.object({}),
+            execute: async () => {
+              try {
+                console.log('🧠 [TOOL] Executando getTaskSuggestions...');
+                const result = await this.executeGetTaskSuggestions();
+                console.log('✅ [TOOL] getTaskSuggestions executado com sucesso');
+                return result || 'Sugestões obtidas com sucesso';
+              } catch (error) {
+                console.error('❌ [TOOL] Erro em getTaskSuggestions:', error);
+                return 'Erro ao obter sugestões: ' + error.message;
+              }
+            }
+          },
+          analyzeCurrentCode: {
+            description: 'Analisar o código atual do projeto',
+            parameters: z.object({}),
+            execute: async () => {
+              try {
+                console.log('💻 [TOOL] Executando analyzeCurrentCode...');
+                const result = await this.executeAnalyzeCurrentCode();
+                console.log('✅ [TOOL] analyzeCurrentCode executado com sucesso');
+                return result || 'Análise de código realizada';
+              } catch (error) {
+                console.error('❌ [TOOL] Erro em analyzeCurrentCode:', error);
+                return 'Erro ao analisar código: ' + error.message;
+              }
+            }
+          },
+          runBuild: {
+            description: 'Executar build do projeto',
+            parameters: z.object({}),
+            execute: async () => {
+              try {
+                console.log('🔨 [TOOL] Executando runBuild...');
+                const result = await this.executeRunBuild();
+                console.log('✅ [TOOL] runBuild executado com sucesso');
+                return result || 'Build executado com sucesso';
+              } catch (error) {
+                console.error('❌ [TOOL] Erro em runBuild:', error);
+                return 'Erro ao executar build: ' + error.message;
               }
             }
           }
@@ -579,6 +674,140 @@ Processo:
     } catch (error) {
       console.error('❌ [TOOLS] Erro em executeGetSystemStatus:', error);
       return 'Erro ao obter status do sistema: ' + error.message;
+    }
+  }
+
+  async executeUpdateTaskStatus(taskId: string, status: string) {
+    if (!this.aiToolsService) {
+      console.log('⚠️ [TOOLS] AIToolsService não está disponível para updateTaskStatus');
+      return 'Serviço de tarefas não está disponível no momento.';
+    }
+    try {
+      const result = await this.aiToolsService.executeUpdateTaskStatus(taskId, status);
+      console.log('🔍 [TOOLS] updateTaskStatus resultado:', result);
+      
+      if (result.success) {
+        return `
+        ${result.message}
+        ${JSON.stringify(result.data)}
+        `
+      } else {
+        return result.error || 'Erro ao atualizar status da tarefa.';
+      }
+    } catch (error) {
+      console.error('❌ [TOOLS] Erro em executeUpdateTaskStatus:', error);
+      return 'Erro ao atualizar status da tarefa: ' + error.message;
+    }
+  }
+
+  async executeDeleteTask(taskId: string) {
+    if (!this.aiToolsService) {
+      console.log('⚠️ [TOOLS] AIToolsService não está disponível para deleteTask');
+      return 'Serviço de tarefas não está disponível no momento.';
+    }
+    try {
+      const result = await this.aiToolsService.executeDeleteTask(taskId);
+      console.log('🔍 [TOOLS] deleteTask resultado:', result);
+      
+      if (result.success) {
+        return `
+        ${result.message}
+        `
+      } else {
+        return result.error || 'Erro ao deletar tarefa.';
+      }
+    } catch (error) {
+      console.error('❌ [TOOLS] Erro em executeDeleteTask:', error);
+      return 'Erro ao deletar tarefa: ' + error.message;
+    }
+  }
+
+  async executeGetTaskStats() {
+    if (!this.aiToolsService) {
+      console.log('⚠️ [TOOLS] AIToolsService não está disponível para getTaskStats');
+      return 'Serviço de estatísticas não está disponível no momento.';
+    }
+    try {
+      const result = await this.aiToolsService.executeGetTaskStats();
+      console.log('🔍 [TOOLS] getTaskStats resultado:', result);
+      
+      if (result.success) {
+        return `
+        ${result.message}
+        ${JSON.stringify(result.data)}
+        `
+      } else {
+        return result.error || 'Erro ao obter estatísticas.';
+      }
+    } catch (error) {
+      console.error('❌ [TOOLS] Erro em executeGetTaskStats:', error);
+      return 'Erro ao obter estatísticas: ' + error.message;
+    }
+  }
+
+  async executeGetTaskSuggestions() {
+    if (!this.aiToolsService) {
+      console.log('⚠️ [TOOLS] AIToolsService não está disponível para getTaskSuggestions');
+      return 'Serviço de sugestões não está disponível no momento.';
+    }
+    try {
+      const result = await this.aiToolsService.executeGetTaskSuggestions();
+      console.log('🔍 [TOOLS] getTaskSuggestions resultado:', result);
+      
+      if (result.success) {
+        return `
+        ${result.message}
+        `
+      } else {
+        return result.error || 'Erro ao obter sugestões.';
+      }
+    } catch (error) {
+      console.error('❌ [TOOLS] Erro em executeGetTaskSuggestions:', error);
+      return 'Erro ao obter sugestões: ' + error.message;
+    }
+  }
+
+  async executeAnalyzeCurrentCode() {
+    if (!this.aiToolsService) {
+      console.log('⚠️ [TOOLS] AIToolsService não está disponível para analyzeCurrentCode');
+      return 'Serviço de análise de código não está disponível no momento.';
+    }
+    try {
+      const result = await this.aiToolsService.executeAnalyzeCurrentCode();
+      console.log('🔍 [TOOLS] analyzeCurrentCode resultado:', result);
+      
+      if (result.success) {
+        return `
+        ${result.message}
+        `
+      } else {
+        return result.error || 'Erro ao analisar código.';
+      }
+    } catch (error) {
+      console.error('❌ [TOOLS] Erro em executeAnalyzeCurrentCode:', error);
+      return 'Erro ao analisar código: ' + error.message;
+    }
+  }
+
+  async executeRunBuild() {
+    if (!this.aiToolsService) {
+      console.log('⚠️ [TOOLS] AIToolsService não está disponível para runBuild');
+      return 'Serviço de build não está disponível no momento.';
+    }
+    try {
+      const result = await this.aiToolsService.executeRunBuild();
+      console.log('🔍 [TOOLS] runBuild resultado:', result);
+      
+      if (result.success) {
+        return `
+        ${result.message}
+        `
+      } else {
+        return result.error || 'Erro ao executar build.';
+      }
+    } catch (error) {
+      console.error('❌ [TOOLS] Erro em executeRunBuild:', error);
+      return 'Erro ao executar build: ' + error.message;
     }
   }
 } 

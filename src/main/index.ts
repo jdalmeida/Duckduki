@@ -16,6 +16,7 @@ import { feedService } from './feedService';
 import { taskService } from './taskService';
 import { AIToolsService } from './aiToolsService';
 import { ChatAPIServer } from './apiRoutes';
+import { AutoLauncher } from './autoLauncher';
 
 class CoPilotoDesktop {
   private mainWindow: BrowserWindow | null = null;
@@ -28,6 +29,7 @@ class CoPilotoDesktop {
   private securityManager: SecurityManager;
   private commandPaletteServer: CommandPaletteServer;
   private chatAPIServer: ChatAPIServer;
+  private autoLauncher: AutoLauncher;
 
   constructor() {
     this.emailService = new EmailService();
@@ -36,6 +38,7 @@ class CoPilotoDesktop {
     this.securityManager = new SecurityManager();
     this.commandPaletteServer = new CommandPaletteServer();
     this.chatAPIServer = new ChatAPIServer();
+    this.autoLauncher = new AutoLauncher();
   }
 
   async initialize() {
@@ -81,12 +84,21 @@ class CoPilotoDesktop {
       console.log('✅ Configuração de email carregada');
     }
 
-    this.createTray();
+    await this.createTray();
     this.setupIPC();
     this.setupGlobalShortcuts();
     this.startMonitoring();
     this.startCommandPaletteServer();
     this.startChatAPIServer();
+    
+    // Verificar se foi iniciado com --minimized (para inicialização automática)
+    if (process.argv.includes('--minimized')) {
+      console.log('🚀 Aplicação iniciada no modo minimizado (inicialização automática)');
+      // Não mostrar a janela principal, apenas manter no tray
+    } else {
+      // Modo normal - pode mostrar a janela se necessário
+      console.log('🚀 Aplicação iniciada no modo normal');
+    }
 
     // Manter app rodando em background
     app.on('window-all-closed', (e) => {
@@ -98,14 +110,23 @@ class CoPilotoDesktop {
     });
   }
 
-  private createTray() {
+  private async createTray() {
     const iconPath = join(__dirname, '../../assets/icon.png');
     const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
     
     this.tray = new Tray(icon);
     this.tray.setToolTip('Duckduki');
     
-    const shortcutText = process.platform === 'darwin' ? 'Cmd+Shift+A' : 'Ctrl+Shift+A';
+    await this.updateTrayMenu();
+    this.tray.on('click', () => this.showMainWindow());
+  }
+
+  private async updateTrayMenu() {
+    if (!this.tray) return;
+    
+    const shortcutText = process.platform === 'darwin' ? 'Cmd+Shift+Space' : 'Ctrl+Shift+Space';
+    const autoLaunchStatus = await this.autoLauncher.getStatus();
+    
     const contextMenu = Menu.buildFromTemplate([
       {
         label: `Abrir Duckduki (${shortcutText})`,
@@ -117,13 +138,26 @@ class CoPilotoDesktop {
       },
       { type: 'separator' },
       {
+        label: autoLaunchStatus.enabled ? 'Desabilitar inicialização automática' : 'Habilitar inicialização automática',
+        enabled: autoLaunchStatus.supported,
+        click: async () => {
+          try {
+            await this.autoLauncher.toggle();
+            await this.updateTrayMenu(); // Atualizar menu após mudança
+            console.log(`✅ Inicialização automática ${autoLaunchStatus.enabled ? 'desabilitada' : 'habilitada'}`);
+          } catch (error) {
+            console.error('❌ Erro ao alterar inicialização automática:', error);
+          }
+        }
+      },
+      { type: 'separator' },
+      {
         label: 'Sair',
         click: () => app.quit()
       }
     ]);
 
     this.tray.setContextMenu(contextMenu);
-    this.tray.on('click', () => this.showMainWindow());
   }
 
   private setupGlobalShortcuts() {
@@ -144,18 +178,37 @@ class CoPilotoDesktop {
 
   private showMainWindow() {
     if (this.mainWindow) {
+      // Forçar desativação do fullscreen quando a janela existente for mostrada
+      if (this.mainWindow.isFullScreen()) {
+        console.log('🔄 Desativando fullscreen da janela existente');
+        this.mainWindow.setFullScreen(false);
+        this.mainWindow.setSize(600, 400);
+        
+        // Aguardar um pouco e restaurar tamanho/posição do spotlight
+        setTimeout(() => {
+          if (this.mainWindow && !this.mainWindow.isFullScreen()) {
+            this.mainWindow.setSize(600, 400);
+            this.positionWindow();
+            console.log('✅ Janela restaurada para modo spotlight');
+          }
+        }, 100);
+      }
+      
       this.mainWindow.show();
       this.mainWindow.focus();
       return;
     }
 
     this.mainWindow = new BrowserWindow({
-      width: 400,
-      height: 600,
+      width: 600,
+      height: 400,
       show: false,
       frame: false,
       resizable: true, // Permitir redimensionamento para funcionar em tela cheia no Windows
       alwaysOnTop: true,
+      transparent: true, // Fazer janela transparente para efeito spotlight
+      backgroundColor: 'rgba(0, 0, 0, 0)', // Fundo completamente transparente
+      roundedCorners: true, // Bordas arredondadas (macOS/Linux)
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -167,7 +220,7 @@ class CoPilotoDesktop {
     if (process.env.NODE_ENV === 'development') {
       // Aguardar um pouco para o Vite iniciar
       setTimeout(() => {
-        this.mainWindow?.loadURL('http://localhost:3000').catch((err) => {
+        this.mainWindow?.loadURL('http://localhost:3003').catch((err) => {
           console.error('Erro ao carregar URL de desenvolvimento:', err);
           // Fallback para arquivo local se Vite não estiver rodando
           this.mainWindow?.loadFile(join(__dirname, '../renderer/index.html'));
@@ -225,14 +278,14 @@ class CoPilotoDesktop {
         this.mainWindow?.setResizable(true);
       }
     });
-
+    
     this.mainWindow.on('leave-full-screen', () => {
       console.log('🖥️  Saiu da tela cheia');
       if (process.platform === 'win32') {
         // Restaurar tamanho original no Windows
         setTimeout(() => {
           if (this.mainWindow && !this.mainWindow.isFullScreen()) {
-            this.mainWindow.setSize(400, 600);
+            this.mainWindow.setSize(600, 400);
             this.positionWindow();
           }
         }, 100);
@@ -241,30 +294,17 @@ class CoPilotoDesktop {
   }
 
   private positionWindow() {
-    if (!this.mainWindow || !this.tray) return;
+    if (!this.mainWindow) return;
 
     const { screen } = require('electron');
-    const trayBounds = this.tray.getBounds();
     const windowBounds = this.mainWindow.getBounds();
     const primaryDisplay = screen.getPrimaryDisplay();
     const screenBounds = primaryDisplay.workAreaSize;
     
-    // Calcular posição baseada na localização da tray
-    let x = Math.round(trayBounds.x + (trayBounds.width / 2) - (windowBounds.width / 2));
-    let y: number;
-    
-    // Verificar se a tray está na parte superior ou inferior da tela
-    if (trayBounds.y < screenBounds.height / 2) {
-      // Tray no topo (macOS, alguns Linux)
-      y = Math.round(trayBounds.y + trayBounds.height + 4);
-    } else {
-      // Tray na parte inferior (Windows, maioria dos casos)
-      y = Math.round(trayBounds.y - windowBounds.height - 4);
-    }
-    
-    // Garantir que a janela não saia da tela
-    x = Math.max(0, Math.min(x, screenBounds.width - windowBounds.width));
-    y = Math.max(0, Math.min(y, screenBounds.height - windowBounds.height));
+    // Centralizar na tela como o Spotlight do macOS
+    const x = Math.round((screenBounds.width - windowBounds.width) / 2);
+    // Posicionar um pouco acima do centro (25% da altura da tela)
+    const y = Math.round(screenBounds.height * 0.25);
     
     this.mainWindow.setPosition(x, y, false);
   }
@@ -272,6 +312,7 @@ class CoPilotoDesktop {
   private showSettings() {
     // Implementar janela de configurações
     console.log('Abrindo configurações...');
+
   }
 
   private setupIPC() {
@@ -673,6 +714,73 @@ class CoPilotoDesktop {
       }
     });
 
+    // === HANDLERS DE CONTROLE DE TEMPO ===
+
+    // Iniciar cronômetro da tarefa
+    ipcMain.handle('start-task-timer', async (event, taskId: string) => {
+      try {
+        const result = await taskService.startTaskTimer(taskId);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao iniciar cronômetro'
+        };
+      }
+    });
+
+    // Pausar cronômetro da tarefa
+    ipcMain.handle('pause-task-timer', async (event, taskId: string) => {
+      try {
+        const result = await taskService.pauseTaskTimer(taskId);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao pausar cronômetro'
+        };
+      }
+    });
+
+    // Parar cronômetro da tarefa
+    ipcMain.handle('stop-task-timer', async (event, taskId: string) => {
+      try {
+        const result = await taskService.stopTaskTimer(taskId);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao parar cronômetro'
+        };
+      }
+    });
+
+    // Adicionar nota à sessão de tempo
+    ipcMain.handle('add-time-session-note', async (event, taskId: string, sessionId: string, notes: string) => {
+      try {
+        const result = await taskService.addTimeSessionNote(taskId, sessionId, notes);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao adicionar nota'
+        };
+      }
+    });
+
+    // Obter estatísticas de tempo da tarefa
+    ipcMain.handle('get-task-time-stats', async (event, taskId: string) => {
+      try {
+        const result = taskService.getTaskTimeStats(taskId);
+        return result;
+      } catch (error) {
+        return {
+          success: false,
+          error: error.message || 'Erro ao obter estatísticas de tempo'
+        };
+      }
+    });
+
     // === HANDLERS DE REPOSITÓRIO DE CONHECIMENTO ===
 
     // Adicionar item ao repositório de conhecimento
@@ -950,6 +1058,96 @@ class CoPilotoDesktop {
           success: false,
           error: error.message || 'Erro ao definir tela inteira'
         };
+      }
+    });
+
+    // Fechar modo spotlight
+    ipcMain.handle('close-spotlight-mode', async () => {
+      if (this.mainWindow) {
+        this.mainWindow.hide();
+      }
+    });
+
+    // Forçar modo spotlight (desativa fullscreen e restaura tamanho)
+    ipcMain.handle('force-spotlight-mode', async () => {
+      try {
+        if (!this.mainWindow) {
+          return {
+            success: false,
+            error: 'Janela principal não existe'
+          };
+        }
+
+        console.log('🎯 Forçando modo spotlight');
+        
+        // Se estiver em fullscreen, desativar
+        if (this.mainWindow.isFullScreen()) {
+          console.log('🔄 Desativando fullscreen');
+          this.mainWindow.setFullScreen(false);
+          
+          // Aguardar mudança de estado
+          await new Promise(resolve => setTimeout(resolve, 150));
+        }
+        
+        // Garantir tamanho e posição corretos
+        this.mainWindow.setSize(600, 400);
+        this.positionWindow();
+        
+        console.log('✅ Modo spotlight forçado com sucesso');
+        
+        return {
+          success: true,
+          isFullScreen: false
+        };
+      } catch (error) {
+        console.error('❌ Erro ao forçar modo spotlight:', error);
+        return {
+          success: false,
+          error: error.message || 'Erro ao forçar modo spotlight'
+        };
+      }
+    });
+
+    // === HANDLERS DE INICIALIZAÇÃO AUTOMÁTICA ===
+    
+    // Habilitar inicialização automática
+    ipcMain.handle('enable-auto-launch', async () => {
+      try {
+        const success = await this.autoLauncher.enable();
+        return { success };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Desabilitar inicialização automática
+    ipcMain.handle('disable-auto-launch', async () => {
+      try {
+        const success = await this.autoLauncher.disable();
+        return { success };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Alternar inicialização automática
+    ipcMain.handle('toggle-auto-launch', async () => {
+      try {
+        const success = await this.autoLauncher.toggle();
+        const status = await this.autoLauncher.getStatus();
+        return { success, ...status };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Verificar status da inicialização automática
+    ipcMain.handle('get-auto-launch-status', async () => {
+      try {
+        const status = await this.autoLauncher.getStatus();
+        return { success: true, ...status };
+      } catch (error) {
+        return { error: error.message };
       }
     });
   }

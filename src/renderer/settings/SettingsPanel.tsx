@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './SettingsPanel.css';
 import { StorageTest } from '../components/StorageTest';
 import { StreamTest } from '../components/StreamTest';
@@ -23,6 +23,47 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
   const [customTls, setCustomTls] = useState(true);
   const [showStorageTest, setShowStorageTest] = useState(false);
   const [showStreamTest, setShowStreamTest] = useState(false);
+  
+  // Estados para inicialização automática
+  const [autoLaunchEnabled, setAutoLaunchEnabled] = useState(false);
+  const [autoLaunchSupported, setAutoLaunchSupported] = useState(false);
+  const [autoLaunchLoading, setAutoLaunchLoading] = useState(false);
+
+  // Carregar status da inicialização automática
+  useEffect(() => {
+    const loadAutoLaunchStatus = async () => {
+      try {
+        const result = await window.electronAPI.getAutoLaunchStatus();
+        if (result.success) {
+          setAutoLaunchEnabled(result.enabled);
+          setAutoLaunchSupported(result.supported);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar status de inicialização automática:', error);
+      }
+    };
+    
+    loadAutoLaunchStatus();
+  }, []);
+
+  const handleAutoLaunchToggle = async () => {
+    setAutoLaunchLoading(true);
+    try {
+      const result = await window.electronAPI.toggleAutoLaunch();
+      if (result.success !== undefined) {
+        setAutoLaunchEnabled(result.enabled);
+        console.log(`Inicialização automática ${result.enabled ? 'habilitada' : 'desabilitada'}`);
+      } else if (result.error) {
+        console.error('Erro ao alterar inicialização automática:', result.error);
+        alert('Erro ao alterar configuração de inicialização automática: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Erro ao alterar inicialização automática:', error);
+      alert('Erro ao alterar configuração de inicialização automática');
+    } finally {
+      setAutoLaunchLoading(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,6 +260,37 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
         </div>
 
         <div className="setting-section">
+          <h3>Inicialização Automática</h3>
+          <p className="setting-description">
+            Configure o Duckduki para iniciar automaticamente quando o computador ligar.
+            {autoLaunchEnabled && <span className="status-ok"> ✅ Habilitada</span>}
+            {!autoLaunchSupported && <span className="status-warning"> ⚠️ Não suportado neste sistema</span>}
+          </p>
+          
+          <div className="auto-launch-controls">
+            <button 
+              onClick={handleAutoLaunchToggle}
+              className={autoLaunchEnabled ? "danger-btn" : "save-btn"}
+              disabled={!autoLaunchSupported || autoLaunchLoading}
+              style={{ minWidth: '200px' }}
+            >
+              {autoLaunchLoading ? '⏳ Processando...' : 
+               autoLaunchEnabled ? '🚫 Desabilitar Inicialização' : '🚀 Habilitar Inicialização'}
+            </button>
+          </div>
+
+          <div className="help-text">
+            <p>🔧 Como funciona:</p>
+            <ul>
+              <li><strong>Windows:</strong> Adiciona entrada no registro do sistema</li>
+              <li><strong>macOS:</strong> Configura item de login automático</li>
+              <li><strong>Linux:</strong> Cria arquivo .desktop no autostart</li>
+            </ul>
+            <p>O app iniciará minimizado no tray quando o computador ligar.</p>
+          </div>
+        </div>
+
+        <div className="setting-section">
           <h3>Diagnóstico do Sistema</h3>
           <p className="setting-description">
             Teste o sistema de armazenamento e comunicação da IA para identificar problemas.
@@ -251,7 +323,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
         <div className="setting-section">
           <h3>Sobre</h3>
           <p className="setting-description">
-            Duckduki v1.0.0<br/>
+            Duckduki v2.0.0<br/>
             Assistente inteligente com IA generativa
           </p>
         </div>

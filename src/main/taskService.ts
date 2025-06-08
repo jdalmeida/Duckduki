@@ -18,6 +18,13 @@ export interface Task {
   createdAt: number;
   dueDate?: number;
   completedAt?: number;
+  // Controle de tempo
+  timeTracking: {
+    totalTimeSpent: number; // tempo total gasto em milissegundos
+    sessions: TimeSession[]; // sessões de trabalho
+    isTimerRunning: boolean; // se o cronômetro está rodando
+    currentSessionStart?: number; // início da sessão atual
+  };
   aiAnalysis: {
     complexity: string;
     suggestedApproach: string;
@@ -25,6 +32,14 @@ export interface Task {
     timeEstimate: string;
     riskFactors: string[];
   };
+}
+
+export interface TimeSession {
+  id: string;
+  startTime: number;
+  endTime: number;
+  duration: number; // duração em milissegundos
+  notes?: string; // anotações da sessão
 }
 
 export interface TaskAnalysis {
@@ -57,6 +72,7 @@ class TaskService {
   constructor() {
     this.dataPath = path.join(app.getPath('userData'), 'tasks.json');
     this.loadTasks();
+    this.migrateTasksForTimeTracking(); // Migrar tarefas existentes
   }
 
   setGroqClient(client: GroqClient) {
@@ -197,6 +213,11 @@ Seja preciso e objetivo. Retorne apenas o JSON.`;
         status: 'pendente',
         createdAt: Date.now(),
         dueDate: analysis.dueDate,
+        timeTracking: {
+          totalTimeSpent: 0,
+          sessions: [],
+          isTimerRunning: false
+        },
         aiAnalysis: {
           complexity: analysis.complexity,
           suggestedApproach: analysis.suggestedApproach,
@@ -387,6 +408,187 @@ Seja conciso e prático.`;
       success: true,
       error: `${tasksToDelete.length} tarefas concluídas removidas`
     };
+  }
+
+  // === CONTROLE DE TEMPO ===
+
+  async startTaskTimer(taskId: string): Promise<TaskServiceResponse> {
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      return {
+        success: false,
+        error: 'Tarefa não encontrada'
+      };
+    }
+
+    if (task.timeTracking.isTimerRunning) {
+      return {
+        success: false,
+        error: 'Cronômetro já está rodando para esta tarefa'
+      };
+    }
+
+    // Parar qualquer outro cronômetro em execução
+    this.tasks.forEach((otherTask) => {
+      if (otherTask.timeTracking.isTimerRunning) {
+        this.pauseTaskTimer(otherTask.id);
+      }
+    });
+
+    task.timeTracking.isTimerRunning = true;
+    task.timeTracking.currentSessionStart = Date.now();
+    
+    // Atualizar status para "em_progresso" se estiver pendente
+    if (task.status === 'pendente') {
+      task.status = 'em_progresso';
+    }
+
+    this.tasks.set(taskId, task);
+    this.saveTasks();
+
+    return {
+      success: true,
+      task
+    };
+  }
+
+  async pauseTaskTimer(taskId: string): Promise<TaskServiceResponse> {
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      return {
+        success: false,
+        error: 'Tarefa não encontrada'
+      };
+    }
+
+    if (!task.timeTracking.isTimerRunning || !task.timeTracking.currentSessionStart) {
+      return {
+        success: false,
+        error: 'Cronômetro não está rodando para esta tarefa'
+      };
+    }
+
+    const now = Date.now();
+    const sessionDuration = now - task.timeTracking.currentSessionStart;
+
+    // Criar nova sessão
+    const session: TimeSession = {
+      id: Date.now().toString(),
+      startTime: task.timeTracking.currentSessionStart,
+      endTime: now,
+      duration: sessionDuration
+    };
+
+    task.timeTracking.sessions.push(session);
+    task.timeTracking.totalTimeSpent += sessionDuration;
+    task.timeTracking.isTimerRunning = false;
+    task.timeTracking.currentSessionStart = undefined;
+
+    this.tasks.set(taskId, task);
+    this.saveTasks();
+
+    return {
+      success: true,
+      task
+    };
+  }
+
+  async stopTaskTimer(taskId: string): Promise<TaskServiceResponse> {
+    // Pausar o cronômetro primeiro
+    const pauseResult = await this.pauseTaskTimer(taskId);
+    if (!pauseResult.success) {
+      return pauseResult;
+    }
+
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      return {
+        success: false,
+        error: 'Tarefa não encontrada'
+      };
+    }
+
+    return {
+      success: true,
+      task
+    };
+  }
+
+  async addTimeSessionNote(taskId: string, sessionId: string, notes: string): Promise<TaskServiceResponse> {
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      return {
+        success: false,
+        error: 'Tarefa não encontrada'
+      };
+    }
+
+    const session = task.timeTracking.sessions.find(s => s.id === sessionId);
+    if (!session) {
+      return {
+        success: false,
+        error: 'Sessão não encontrada'
+      };
+    }
+
+    session.notes = notes;
+    this.tasks.set(taskId, task);
+    this.saveTasks();
+
+    return {
+      success: true,
+      task
+    };
+  }
+
+  getTaskTimeStats(taskId: string): TaskServiceResponse {
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      return {
+        success: false,
+        error: 'Tarefa não encontrada'
+      };
+    }
+
+    const timeStats = {
+      totalTimeSpent: task.timeTracking.totalTimeSpent,
+      totalSessions: task.timeTracking.sessions.length,
+      averageSessionTime: task.timeTracking.sessions.length > 0 
+        ? task.timeTracking.totalTimeSpent / task.timeTracking.sessions.length 
+        : 0,
+      isTimerRunning: task.timeTracking.isTimerRunning,
+      currentSessionDuration: task.timeTracking.isTimerRunning && task.timeTracking.currentSessionStart
+        ? Date.now() - task.timeTracking.currentSessionStart
+        : 0,
+      sessions: task.timeTracking.sessions
+    };
+
+    return {
+      success: true,
+      error: JSON.stringify(timeStats) // Usando error field para retornar dados
+    };
+  }
+
+  // Método para migrar tarefas existentes (adicionar campos de tempo)
+  private migrateTasksForTimeTracking(): void {
+    let migrated = false;
+    
+    this.tasks.forEach((task, id) => {
+      if (!task.timeTracking) {
+        task.timeTracking = {
+          totalTimeSpent: 0,
+          sessions: [],
+          isTimerRunning: false
+        };
+        this.tasks.set(id, task);
+        migrated = true;
+      }
+    });
+
+    if (migrated) {
+      this.saveTasks();
+      console.log('Tarefas migradas para incluir controle de tempo');
+    }
   }
 }
 

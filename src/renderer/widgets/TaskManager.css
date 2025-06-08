@@ -208,6 +208,107 @@
   margin: 0 0 16px 0;
 }
 
+/* Controle de tempo */
+.time-tracking {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.time-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.time-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.time-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.time-value {
+  font-size: 14px;
+  color: white;
+  font-weight: 600;
+}
+
+.time-value.running {
+  color: #4CAF50;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.current-session {
+  padding: 8px 12px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.timer-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.timer-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.timer-btn.start-timer {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+}
+
+.timer-btn.start-timer:hover {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+  transform: translateY(-1px);
+}
+
+.timer-btn.pause-timer {
+  background: linear-gradient(135deg, #FF9800, #F57C00);
+  color: white;
+}
+
+.timer-btn.pause-timer:hover {
+  background: linear-gradient(135deg, #F57C00, #E65100);
+  transform: translateY(-1px);
+}
+
+.timer-btn.stop-timer {
+  background: linear-gradient(135deg, #f44336, #d32f2f);
+  color: white;
+}
+
+.timer-btn.stop-timer:hover {
+  background: linear-gradient(135deg, #d32f2f, #b71c1c);
+  transform: translateY(-1px);
+}
+
 .task-item-header {
   display: flex;
   justify-content: space-between;
@@ -362,6 +463,29 @@
 .reopen-btn {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+}
+
+.insight-btn {
+  background: linear-gradient(135deg, #6f42c1, #5a2d8c);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.insight-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5a2d8c, #4c2875);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+}
+
+.insight-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.insight-btn.saving {
+  animation: pulse 1.5s infinite;
 }
 
 .clear-completed-btn {

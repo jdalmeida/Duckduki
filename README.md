@@ -4,7 +4,7 @@
 
 Um aplicativo desktop multiplataforma (Windows, macOS, Linux) de alta performance que utiliza a API Groq para fornecer assistência inteligente e proativa, elevando sua produtividade através de sugestões contextuais e automações inteligentes.
 
-![Duckduki](https://img.shields.io/badge/Version-1.0.0-blue.svg)
+![Duckduki](https://img.shields.io/badge/Version-2.0.0-blue.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 

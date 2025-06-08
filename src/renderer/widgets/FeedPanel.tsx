@@ -26,6 +26,7 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [savingPost, setSavingPost] = useState<string | null>(null);
 
   useEffect(() => {
     if (isVisible) {
@@ -96,6 +97,43 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
       console.error('Erro ao abrir URL:', error);
       // Fallback para window.open
       window.open(url, '_blank');
+    }
+  };
+
+  const savePostSummary = async (feed: FeedItem, event: React.MouseEvent) => {
+    event.stopPropagation(); // Impede que o clique abra o link
+    
+    setSavingPost(feed.id);
+    
+    try {
+      // Criar conteúdo para o resumo baseado no feed
+      const content = `${feed.title}\n\n${feed.description || 'Descrição não disponível'}\n\nFonte: ${getSourceLabel(feed.source)}\nPontuação: ${feed.score}\nComentários: ${feed.comments}${feed.author ? `\nAutor: ${feed.author}` : ''}`;
+      
+      const tags = [
+        getSourceLabel(feed.source).toLowerCase(),
+        'feed',
+        'tech',
+        ...(feed.tags || [])
+      ];
+
+      const result = await window.electronAPI.savePostSummary(
+        feed.title,
+        content,
+        feed.url,
+        tags
+      );
+
+      if (result.success) {
+        // Mostrar feedback visual de sucesso
+        alert(`✅ Resumo salvo com sucesso no repositório de conhecimento!`);
+      } else {
+        alert(`❌ Erro ao salvar resumo: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar resumo:', error);
+      alert('❌ Erro ao salvar resumo. Verifique sua configuração.');
+    } finally {
+      setSavingPost(null);
     }
   };
 
@@ -241,20 +279,31 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
                 <div 
                   key={feed.id}
                   className="feed-item"
-                  onClick={() => openFeed(feed.url)}
                 >
                   <div className="feed-item-header">
                     <div className="feed-source">
                       <span className="source-icon">{getSourceIcon(feed.source)}</span>
                       <span className="source-label">{getSourceLabel(feed.source)}</span>
                     </div>
-                    <span className="feed-time">{formatTime(feed.timestamp)}</span>
+                    <div className="feed-actions">
+                      <button
+                        className={`save-summary-btn ${savingPost === feed.id ? 'saving' : ''}`}
+                        onClick={(e) => savePostSummary(feed, e)}
+                        disabled={savingPost === feed.id}
+                        title="Salvar resumo no repositório de conhecimento"
+                      >
+                        {savingPost === feed.id ? '⏳' : '💾'}
+                      </button>
+                      <span className="feed-time">{formatTime(feed.timestamp)}</span>
+                    </div>
                   </div>
                   
-                  <h4 className="feed-title">{feed.title}</h4>
+                  <h4 className="feed-title" onClick={() => openFeed(feed.url)}>
+                    {feed.title}
+                  </h4>
                   
                   {feed.description && (
-                    <p className="feed-description">
+                    <p className="feed-description" onClick={() => openFeed(feed.url)}>
                       {feed.description.length > 120 
                         ? feed.description.slice(0, 120) + '...' 
                         : feed.description}

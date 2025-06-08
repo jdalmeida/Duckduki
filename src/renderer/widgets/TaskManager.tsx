@@ -16,6 +16,13 @@ interface Task {
   createdAt: number;
   dueDate?: number;
   completedAt?: number;
+  // Controle de tempo
+  timeTracking: {
+    totalTimeSpent: number;
+    sessions: TimeSession[];
+    isTimerRunning: boolean;
+    currentSessionStart?: number;
+  };
   aiAnalysis: {
     complexity: string;
     suggestedApproach: string;
@@ -23,6 +30,14 @@ interface Task {
     timeEstimate: string;
     riskFactors: string[];
   };
+}
+
+interface TimeSession {
+  id: string;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  notes?: string;
 }
 
 interface TaskManagerProps {
@@ -33,13 +48,13 @@ interface TaskManagerProps {
 const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(false);
-  const [addingTask, setAddingTask] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newTaskInput, setNewTaskInput] = useState('');
   const [filter, setFilter] = useState<string>('all');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string>('');
   const [stats, setStats] = useState<any>(null);
+  const [currentTime, setCurrentTime] = useState<number>(Date.now());
+  const [savingInsight, setSavingInsight] = useState<string | null>(null);
 
   useEffect(() => {
     if (isVisible) {
@@ -47,6 +62,15 @@ const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
       loadStats();
     }
   }, [isVisible]);
+
+  // Atualizar tempo atual a cada segundo para cronômetros ativos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const loadTasks = async () => {
     setLoading(true);
@@ -77,35 +101,12 @@ const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
   const loadStats = async () => {
     try {
       const result = await window.electronAPI.getTaskStats();
+      
       if (result.success) {
         setStats(result.stats);
       }
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error);
-    }
-  };
-
-  const addTask = async () => {
-    if (!newTaskInput.trim()) return;
-
-    setAddingTask(true);
-    setError(null);
-
-    try {
-      const result = await window.electronAPI.addTask(newTaskInput);
-      
-      if (result.success) {
-        setNewTaskInput('');
-        await loadTasks();
-        await loadStats();
-      } else {
-        setError(result.error || 'Erro ao adicionar tarefa');
-      }
-    } catch (error) {
-      console.error('Erro ao adicionar tarefa:', error);
-      setError('Erro de conexão');
-    } finally {
-      setAddingTask(false);
     }
   };
 
@@ -126,6 +127,8 @@ const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
   };
 
   const deleteTask = async (taskId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) return;
+
     try {
       const result = await window.electronAPI.deleteTask(taskId);
       
@@ -133,10 +136,10 @@ const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
         await loadTasks();
         await loadStats();
       } else {
-        setError(result.error || 'Erro ao deletar tarefa');
+        setError(result.error || 'Erro ao excluir tarefa');
       }
     } catch (error) {
-      console.error('Erro ao deletar tarefa:', error);
+      console.error('Erro ao excluir tarefa:', error);
       setError('Erro de conexão');
     }
   };
@@ -172,6 +175,114 @@ const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
       }
     } catch (error) {
       console.error('Erro ao limpar tarefas:', error);
+      setError('Erro de conexão');
+    }
+  };
+
+  const saveTaskInsight = async (task: Task) => {
+    setSavingInsight(task.id);
+    
+    try {
+      // Criar conteúdo estruturado para o insight da tarefa
+      const timeSpentFormatted = formatDuration(task.timeTracking.totalTimeSpent);
+      const completedAt = task.completedAt ? new Date(task.completedAt).toLocaleDateString('pt-BR') : 'N/A';
+      
+      const content = `**Tarefa Concluída: ${task.title}**
+
+**Descrição:**
+${task.description}
+
+**Análise da IA:**
+- **Complexidade:** ${task.aiAnalysis.complexity}
+- **Abordagem Sugerida:** ${task.aiAnalysis.suggestedApproach}
+- **Pré-requisitos:** ${task.aiAnalysis.prerequisites.join(', ') || 'Nenhum'}
+- **Fatores de Risco:** ${task.aiAnalysis.riskFactors.join(', ') || 'Nenhum'}
+
+**Execução:**
+- **Prioridade:** ${task.priority.toUpperCase()}
+- **Categoria:** ${task.category}
+- **Tempo Estimado:** ${task.aiAnalysis.timeEstimate}
+- **Tempo Real Gasto:** ${timeSpentFormatted}
+- **Data de Conclusão:** ${completedAt}
+
+**Sessões de Trabalho:**
+${task.timeTracking.sessions.map((session, index) => 
+  `${index + 1}. ${formatDuration(session.duration)}${session.notes ? ` - ${session.notes}` : ''}`
+).join('\n') || 'Nenhuma sessão registrada'}
+
+**Tags:** ${task.tags.join(', ') || 'Nenhuma'}`;
+
+      const tags = [
+        'tarefa-concluída',
+        'insight',
+        'produtividade',
+        task.category,
+        task.priority,
+        ...task.tags
+      ];
+
+      const result = await window.electronAPI.addKnowledgeItem({
+        title: `Insight: ${task.title}`,
+        content,
+        type: 'note',
+        tags,
+        url: undefined
+      });
+
+      if (result.success) {
+        alert('✅ Insight da tarefa salvo no repositório de conhecimento!');
+      } else {
+        alert(`❌ Erro ao salvar insight: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar insight:', error);
+      alert('❌ Erro ao salvar insight. Verifique sua configuração.');
+    } finally {
+      setSavingInsight(null);
+    }
+  };
+
+  const startTimer = async (taskId: string) => {
+    try {
+      const result = await window.electronAPI.startTaskTimer(taskId);
+      
+      if (result.success) {
+        await loadTasks();
+      } else {
+        setError(result.error || 'Erro ao iniciar cronômetro');
+      }
+    } catch (error) {
+      console.error('Erro ao iniciar cronômetro:', error);
+      setError('Erro de conexão');
+    }
+  };
+
+  const pauseTimer = async (taskId: string) => {
+    try {
+      const result = await window.electronAPI.pauseTaskTimer(taskId);
+      
+      if (result.success) {
+        await loadTasks();
+      } else {
+        setError(result.error || 'Erro ao pausar cronômetro');
+      }
+    } catch (error) {
+      console.error('Erro ao pausar cronômetro:', error);
+      setError('Erro de conexão');
+    }
+  };
+
+  const stopTimer = async (taskId: string) => {
+    try {
+      const result = await window.electronAPI.stopTaskTimer(taskId);
+      
+      if (result.success) {
+        await loadTasks();
+      } else {
+        setError(result.error || 'Erro ao parar cronômetro');
+      }
+    } catch (error) {
+      console.error('Erro ao parar cronômetro:', error);
       setError('Erro de conexão');
     }
   };
@@ -219,6 +330,32 @@ const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
     if (days === 0) return 'hoje';
     if (days === 1) return 'ontem';
     return `${days}d atrás`;
+  };
+
+  const formatDuration = (milliseconds: number) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    } else {
+      return `${seconds}s`;
+    }
+  };
+
+  const getCurrentSessionDuration = (task: Task) => {
+    if (!task.timeTracking.isTimerRunning || !task.timeTracking.currentSessionStart) {
+      return 0;
+    }
+    return currentTime - task.timeTracking.currentSessionStart;
+  };
+
+  const getTotalTimeWithCurrent = (task: Task) => {
+    return task.timeTracking.totalTimeSpent + getCurrentSessionDuration(task);
   };
 
   if (!isVisible) return null;
@@ -288,34 +425,6 @@ const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
             </div>
           </div>
         )}
-
-        {/* Adicionar nova tarefa */}
-        <div className="add-task-section">
-          <div className="add-task-input">
-            <textarea
-              placeholder="Descreva sua tarefa em linguagem natural... Ex: 'Preciso finalizar o relatório até sexta-feira'"
-              value={newTaskInput}
-              onChange={(e) => setNewTaskInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.ctrlKey) {
-                  addTask();
-                }
-              }}
-              disabled={addingTask}
-              rows={2}
-            />
-            <button 
-              className="add-task-btn"
-              onClick={addTask}
-              disabled={addingTask || !newTaskInput.trim()}
-            >
-              {addingTask ? '🤖' : '+'} {addingTask ? 'Analisando...' : 'Adicionar'}
-            </button>
-          </div>
-          <p className="add-task-hint">
-            💡 A IA analisará automaticamente urgência, facilidade e priorizará sua tarefa
-          </p>
-        </div>
 
         {/* Filtros */}
         <div className="task-filters">
@@ -387,7 +496,7 @@ const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
                   key={task.id}
                   className={`task-item priority-${task.priority} status-${task.status}`}
                 >
-                  <div className="task-item-header">
+                  <div className="task-item-header" style={{backgroundColor: `${getPriorityColor(task.priority)}90`}}>
                     <div className="task-priority">
                       <span className="priority-icon">{getPriorityIcon(task.priority)}</span>
                       <span className="priority-label">{task.priority.toUpperCase()}</span>
@@ -441,6 +550,59 @@ const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
                     </div>
                   )}
                   
+                  {/* Controle de tempo */}
+                  <div className="time-tracking">
+                    <div className="time-stats">
+                      <div className="time-stat">
+                        <span className="time-label">Tempo total:</span>
+                        <span className="time-value">{formatDuration(getTotalTimeWithCurrent(task))}</span>
+                      </div>
+                      {task.timeTracking.sessions.length > 0 && (
+                        <div className="time-stat">
+                          <span className="time-label">Sessões:</span>
+                          <span className="time-value">{task.timeTracking.sessions.length}</span>
+                        </div>
+                      )}
+                      {task.timeTracking.isTimerRunning && (
+                        <div className="time-stat current-session">
+                          <span className="time-label">Sessão atual:</span>
+                          <span className="time-value running">
+                            {formatDuration(getCurrentSessionDuration(task))}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="timer-controls">
+                      {!task.timeTracking.isTimerRunning ? (
+                        <button 
+                          className="timer-btn start-timer"
+                          onClick={() => startTimer(task.id)}
+                          title="Iniciar cronômetro"
+                        >
+                          ▶️ Iniciar
+                        </button>
+                      ) : (
+                        <>
+                          <button 
+                            className="timer-btn pause-timer"
+                            onClick={() => pauseTimer(task.id)}
+                            title="Pausar cronômetro"
+                          >
+                            ⏸️ Pausar
+                          </button>
+                          <button 
+                            className="timer-btn stop-timer"
+                            onClick={() => stopTimer(task.id)}
+                            title="Parar cronômetro"
+                          >
+                            ⏹️ Parar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
                   <div className="task-actions">
                     {task.status === 'pendente' && (
                       <button 
@@ -469,12 +631,22 @@ const TaskManager: React.FC<TaskManagerProps> = ({ isVisible, onClose }) => {
                     )}
                     
                     {task.status === 'concluida' && (
-                      <button 
-                        className="action-btn reopen-btn"
-                        onClick={() => updateTaskStatus(task.id, 'pendente')}
-                      >
-                        🔄 Reabrir
-                      </button>
+                      <>
+                        <button 
+                          className="action-btn reopen-btn"
+                          onClick={() => updateTaskStatus(task.id, 'pendente')}
+                        >
+                          🔄 Reabrir
+                        </button>
+                        <button 
+                          className={`action-btn insight-btn ${savingInsight === task.id ? 'saving' : ''}`}
+                          onClick={() => saveTaskInsight(task)}
+                          disabled={savingInsight === task.id}
+                          title="Salvar insight no repositório de conhecimento"
+                        >
+                          {savingInsight === task.id ? '⏳' : '💡'} Insight
+                        </button>
+                      </>
                     )}
                     
                     <button 

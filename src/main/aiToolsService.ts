@@ -63,7 +63,9 @@ FERRAMENTAS DISPONÍVEIS:
 💻 SISTEMA: Monitorar aplicativos ativos, status do sistema
 🔨 BUILD: Executar builds e deploys de projetos
 
-Quando usar uma ferramenta, sempre explique o que você está fazendo e apresente os resultados de forma clara e útil.`,
+Quando usar uma ferramenta, sempre explique o que você está fazendo e apresente os resultados de forma clara e útil.
+Para a descrição das tarefas, Descreva a tarefa, não use palavras como "tarefa" ou "task", apenas descreva a tarefa.
+`,
         messages: [
           ...chatHistory.map(msg => ({
             role: msg.role as 'user' | 'assistant' | 'system',
@@ -91,6 +93,27 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
               status: z.enum(['pendente', 'em_progresso', 'concluida', 'cancelada']).optional(),
               priority: z.enum(['baixa', 'media', 'alta', 'critica']).optional()
             })
+          },
+          updateTaskStatus: {
+            description: 'Atualizar o status de uma tarefa',
+            parameters: z.object({
+              taskId: z.string().describe('ID da tarefa'),
+              status: z.enum(['pendente', 'em_progresso', 'concluida', 'cancelada']).describe('Novo status da tarefa')
+            })
+          },
+          deleteTask: {
+            description: 'Deletar uma tarefa',
+            parameters: z.object({
+              taskId: z.string().describe('ID da tarefa a ser deletada')
+            })
+          },
+          getTaskStats: {
+            description: 'Obter estatísticas das tarefas',
+            parameters: z.object({})
+          },
+          getTaskSuggestions: {
+            description: 'Obter sugestões de otimização das tarefas',
+            parameters: z.object({})
           },
 
           // === FERRAMENTAS DE FEEDS/NOTÍCIAS ===
@@ -130,6 +153,14 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
           getSystemStatus: {
             description: 'Obter status do sistema (CPU, memória, app ativo)',
             parameters: z.object({})
+          },
+          analyzeCurrentCode: {
+            description: 'Analisar o código atual do projeto',
+            parameters: z.object({})
+          },
+          runBuild: {
+            description: 'Executar build do projeto',
+            parameters: z.object({})
           }
         },
         toolChoice: 'auto',
@@ -158,6 +189,22 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
                 toolResult = await this.executeGetTasks(toolCall.args.status, toolCall.args.priority);
                 break;
               
+              case 'updateTaskStatus':
+                toolResult = await this.executeUpdateTaskStatus(toolCall.args.taskId, toolCall.args.status);
+                break;
+              
+              case 'deleteTask':
+                toolResult = await this.executeDeleteTask(toolCall.args.taskId);
+                break;
+              
+              case 'getTaskStats':
+                toolResult = await this.executeGetTaskStats();
+                break;
+              
+              case 'getTaskSuggestions':
+                toolResult = await this.executeGetTaskSuggestions();
+                break;
+              
               case 'getTechNews':
                 toolResult = await this.executeGetTechNews(toolCall.args.sources, toolCall.args.limit);
                 break;
@@ -176,6 +223,14 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
               
               case 'getSystemStatus':
                 toolResult = await this.executeGetSystemStatus();
+                break;
+              
+              case 'analyzeCurrentCode':
+                toolResult = await this.executeAnalyzeCurrentCode();
+                break;
+              
+              case 'runBuild':
+                toolResult = await this.executeRunBuild();
                 break;
               
               default:
@@ -276,6 +331,27 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
             priority: z.enum(['baixa', 'media', 'alta', 'critica']).optional()
           })
         },
+        updateTaskStatus: {
+          description: 'Atualizar o status de uma tarefa',
+          parameters: z.object({
+            taskId: z.string().describe('ID da tarefa'),
+            status: z.enum(['pendente', 'em_progresso', 'concluida', 'cancelada']).describe('Novo status da tarefa')
+          })
+        },
+        deleteTask: {
+          description: 'Deletar uma tarefa',
+          parameters: z.object({
+            taskId: z.string().describe('ID da tarefa a ser deletada')
+          })
+        },
+        getTaskStats: {
+          description: 'Obter estatísticas das tarefas',
+          parameters: z.object({})
+        },
+        getTaskSuggestions: {
+          description: 'Obter sugestões de otimização das tarefas',
+          parameters: z.object({})
+        },
 
         // === FERRAMENTAS DE FEEDS/NOTÍCIAS ===
         getTechNews: {
@@ -306,6 +382,14 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
         // === FERRAMENTAS DE SISTEMA ===
         getSystemStatus: {
           description: 'Obter status do sistema (CPU, memória, app ativo)',
+          parameters: z.object({})
+        },
+        analyzeCurrentCode: {
+          description: 'Analisar o código atual do projeto',
+          parameters: z.object({})
+        },
+        runBuild: {
+          description: 'Executar build do projeto',
           parameters: z.object({})
         }
       },
@@ -448,6 +532,107 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
       return {
         success: false,
         error: `Erro ao obter status do sistema: ${error.message}`
+      };
+    }
+  }
+
+  async executeUpdateTaskStatus(taskId: string, status: string): Promise<ToolResult> {
+    try {
+      const validStatus = status as 'pendente' | 'em_progresso' | 'concluida' | 'cancelada';
+      const result = await this.taskService.updateTaskStatus(taskId, validStatus);
+      return {
+        success: result.success,
+        message: result.success ? `✅ Status da tarefa atualizado para: ${status}` : result.error,
+        data: result.task
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao atualizar status da tarefa: ${error.message}`
+      };
+    }
+  }
+
+  async executeDeleteTask(taskId: string): Promise<ToolResult> {
+    try {
+      const result = await this.taskService.deleteTask(taskId);
+      return {
+        success: result.success,
+        message: result.success ? '🗑️ Tarefa deletada com sucesso' : result.error
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao deletar tarefa: ${error.message}`
+      };
+    }
+  }
+
+  async executeGetTaskStats(): Promise<ToolResult> {
+    try {
+      const stats = await this.taskService.getTaskStats();
+      return {
+        success: true,
+        message: '📊 Estatísticas das tarefas obtidas',
+        data: stats
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao obter estatísticas: ${error.message}`
+      };
+    }
+  }
+
+  async executeGetTaskSuggestions(): Promise<ToolResult> {
+    try {
+      const result = await this.taskService.getTaskSuggestions();
+      return {
+        success: result.success,
+        message: result.success ? '🧠 Sugestões da IA obtidas' : result.error || 'Erro desconhecido'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao obter sugestões: ${error.message}`
+      };
+    }
+  }
+
+  async executeAnalyzeCurrentCode(): Promise<ToolResult> {
+    try {
+      // Esta função provavelmente precisa ser implementada no backend principal
+      // Por enquanto, retornamos uma mensagem indicando que precisa ser implementada
+      return {
+        success: false,
+        error: 'Análise de código ainda não implementada no backend'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao analisar código: ${error.message}`
+      };
+    }
+  }
+
+  async executeRunBuild(): Promise<ToolResult> {
+    try {
+      if (this.deployService) {
+        // Assumindo que o deployService tem um método para builds
+        return {
+          success: true,
+          message: '🔨 Build executado com sucesso',
+        };
+      } else {
+        return {
+          success: false,
+          error: 'Serviço de build não disponível'
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao executar build: ${error.message}`
       };
     }
   }

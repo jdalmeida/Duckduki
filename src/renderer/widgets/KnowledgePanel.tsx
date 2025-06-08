@@ -35,6 +35,7 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
   const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null);
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPostSummaryModal, setShowPostSummaryModal] = useState(false);
 
   // Estados do formulário de adição
   const [newItem, setNewItem] = useState({
@@ -43,6 +44,15 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
     type: 'note' as KnowledgeItem['type'],
     tags: '',
     url: ''
+  });
+
+  // Estados do formulário de resumo de post
+  const [postSummaryForm, setPostSummaryForm] = useState({
+    title: '',
+    content: '',
+    url: '',
+    tags: '',
+    isUrl: false
   });
 
   const typeLabels = {
@@ -95,13 +105,11 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
   };
 
   const performSearch = async () => {
-    if (!searchQuery.trim()) return;
-    
     setIsSearching(true);
     try {
       const result = await window.electronAPI.searchKnowledge(
-        searchQuery,
-        selectedType || undefined,
+        searchQuery, 
+        selectedType || undefined, 
         20
       );
       if (result.success) {
@@ -114,23 +122,19 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
   };
 
   const handleAddItem = async () => {
-    if (!newItem.title.trim() || !newItem.content.trim()) {
-      alert('Título e conteúdo são obrigatórios');
-      return;
-    }
+    if (!newItem.title.trim() || !newItem.content.trim()) return;
 
     setIsLoading(true);
     try {
-      const tagsArray = newItem.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
-      const item = {
+      const tags = newItem.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      const result = await window.electronAPI.addKnowledgeItem({
         title: newItem.title,
         content: newItem.content,
         type: newItem.type,
-        tags: tagsArray,
+        tags,
         url: newItem.url || undefined
-      };
+      });
 
-      const result = await window.electronAPI.addKnowledgeItem(item);
       if (result.success) {
         setNewItem({ title: '', content: '', type: 'note', tags: '', url: '' });
         setShowAddForm(false);
@@ -161,28 +165,47 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
   };
 
   const handleSavePostSummary = async () => {
-    const title = prompt('Título do post:');
-    if (!title) return;
+    if (!postSummaryForm.title.trim()) {
+      alert('Por favor, digite um título para o post');
+      return;
+    }
 
-    const content = prompt('Conteúdo ou URL do post:');
-    if (!content) return;
-
-    const url = prompt('URL (opcional):') || undefined;
-    const tagsInput = prompt('Tags (separadas por vírgula):') || '';
-    const tags = tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag);
+    if (!postSummaryForm.content.trim()) {
+      alert('Por favor, digite o conteúdo ou URL do post');
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const result = await window.electronAPI.savePostSummary(title, content, url, tags);
+      const tags = postSummaryForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+      const url = postSummaryForm.url.trim() || undefined;
+      
+      const result = await window.electronAPI.savePostSummary(
+        postSummaryForm.title,
+        postSummaryForm.content,
+        url,
+        tags
+      );
+
       if (result.success) {
+        setPostSummaryForm({ title: '', content: '', url: '', tags: '', isUrl: false });
+        setShowPostSummaryModal(false);
         loadKnowledgeItems();
         loadStats();
+        alert('✅ Resumo salvo com sucesso!');
+      } else {
+        alert(`❌ Erro ao salvar resumo: ${result.error}`);
       }
     } catch (error) {
       console.error('Erro ao salvar resumo:', error);
-      alert('Erro ao salvar resumo do post');
+      alert('❌ Erro ao salvar resumo do post');
     }
     setIsLoading(false);
+  };
+
+  const resetPostSummaryForm = () => {
+    setPostSummaryForm({ title: '', content: '', url: '', tags: '', isUrl: false });
+    setShowPostSummaryModal(false);
   };
 
   const formatDate = (dateStr: string) => {
@@ -205,241 +228,369 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
   if (!isVisible) return null;
 
   return (
-    <div className="knowledge-panel">
-      <div className="knowledge-header">
-        <h2>🧠 Repositório de Conhecimento</h2>
-        <button className="close-button" onClick={onClose}>✕</button>
-      </div>
-
-      {stats && (
-        <div className="knowledge-stats">
-          <div className="stat-item">
-            <span className="stat-label">Total de Itens:</span>
-            <span className="stat-value">{stats.totalItems}</span>
+    <div className="knowledge-panel-overlay">
+      <div className="knowledge-panel">
+        <div className="knowledge-panel-header">
+          <div className="knowledge-panel-title">
+            <span className="title-icon">📚</span>
+            <h3>Repositório de Conhecimento</h3>
+            <span className="subtitle">Base inteligente de conhecimento</span>
           </div>
-          <div className="stat-item">
-            <span className="stat-label">Palavras Indexadas:</span>
-            <span className="stat-value">{stats.totalWordsIndexed.toLocaleString()}</span>
-          </div>
-          <div className="stat-types">
-            {Object.entries(stats.itemsByType).map(([type, count]) => (
-              <span key={type} className="type-count">
-                {typeLabels[type as keyof typeof typeLabels]}: {count as number}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="knowledge-controls">
-        <div className="search-section">
-          <input
-            type="text"
-            placeholder="Buscar no conhecimento..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
-          <select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            className="type-filter"
-          >
-            <option value="">Todos os tipos</option>
-            {Object.entries(typeLabels).map(([type, label]) => (
-              <option key={type} value={type}>{label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="action-buttons">
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="add-button"
-            disabled={isLoading}
-          >
-            📝 Adicionar Nota
-          </button>
-          <button
-            onClick={handleSavePostSummary}
-            className="post-button"
-            disabled={isLoading}
-          >
-            📰 Resumir Post
-          </button>
-        </div>
-      </div>
-
-      {showAddForm && (
-        <div className="add-form">
-          <h3>Adicionar Novo Item</h3>
-          <input
-            type="text"
-            placeholder="Título"
-            value={newItem.title}
-            onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
-            className="form-input"
-          />
-          <select
-            value={newItem.type}
-            onChange={(e) => setNewItem({ ...newItem, type: e.target.value as any })}
-            className="form-select"
-          >
-            {Object.entries(typeLabels).map(([type, label]) => (
-              <option key={type} value={type}>{label}</option>
-            ))}
-          </select>
-          <textarea
-            placeholder="Conteúdo"
-            value={newItem.content}
-            onChange={(e) => setNewItem({ ...newItem, content: e.target.value })}
-            className="form-textarea"
-            rows={4}
-          />
-          <input
-            type="text"
-            placeholder="Tags (separadas por vírgula)"
-            value={newItem.tags}
-            onChange={(e) => setNewItem({ ...newItem, tags: e.target.value })}
-            className="form-input"
-          />
-          <input
-            type="url"
-            placeholder="URL (opcional)"
-            value={newItem.url}
-            onChange={(e) => setNewItem({ ...newItem, url: e.target.value })}
-            className="form-input"
-          />
-          <div className="form-buttons">
-            <button onClick={handleAddItem} className="save-button" disabled={isLoading}>
-              💾 Salvar
+          
+          <div className="knowledge-panel-controls">
+            <button 
+              className="refresh-btn"
+              onClick={loadKnowledgeItems}
+              disabled={isLoading}
+              title="Atualizar repositório"
+            >
+              ↻
             </button>
-            <button onClick={() => setShowAddForm(false)} className="cancel-button">
-              ❌ Cancelar
+            <button 
+              className="close-btn"
+              onClick={onClose}
+              title="Fechar repositório"
+            >
+              ✕
             </button>
           </div>
         </div>
-      )}
 
-      <div className="knowledge-content">
-        {isSearching && <div className="loading">🔍 Buscando...</div>}
-        
-        {searchQuery && searchResults.length > 0 && (
-          <div className="search-results">
-            <h3>Resultados da Busca ({searchResults.length})</h3>
-            {searchResults.map((result) => (
-              <div
-                key={result.item.id}
-                className="knowledge-item search-result"
-                onClick={() => setSelectedItem(result.item)}
-              >
-                <div className="item-header">
-                  <span className="item-type">{typeLabels[result.item.type]}</span>
-                  <span className="relevance-score">Relevância: {result.relevanceScore}</span>
-                </div>
-                <h4>{result.item.title}</h4>
-                <div className="item-content" dangerouslySetInnerHTML={{ __html: result.highlightedContent }} />
-                <div className="item-meta">
-                  <span>{formatDate(result.item.createdAt)}</span>
-                  {result.item.tags.length > 0 && (
-                    <div className="tags">
-                      {result.item.tags.map(tag => (
-                        <span key={tag} className="tag">{tag}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!searchQuery && knowledgeItems.length > 0 && (
-          <div className="knowledge-list">
-            <h3>Itens Recentes</h3>
-            {knowledgeItems.map((item) => (
-              <div
-                key={item.id}
-                className="knowledge-item"
-                onClick={() => setSelectedItem(item)}
-              >
-                <div className="item-header">
-                  <span className="item-type">{typeLabels[item.type]}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteItem(item.id);
-                    }}
-                    className="delete-button"
-                  >
-                    🗑️
-                  </button>
-                </div>
-                <h4>{item.title}</h4>
-                <div className="item-content">{renderContent(item.content)}</div>
-                <div className="item-meta">
-                  <span>{formatDate(item.createdAt)}</span>
-                  {item.tags.length > 0 && (
-                    <div className="tags">
-                      {item.tags.map(tag => (
-                        <span key={tag} className="tag">{tag}</span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!searchQuery && knowledgeItems.length === 0 && !isLoading && (
-          <div className="empty-state">
-            <h3>📚 Nenhum conhecimento salvo</h3>
-            <p>Comece adicionando notas, salvando resumos de posts interessantes ou deixe a IA salvar suas conversas automaticamente.</p>
-          </div>
-        )}
-      </div>
-
-      {selectedItem && (
-        <div className="knowledge-modal" onClick={() => setSelectedItem(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{selectedItem.title}</h3>
-              <button onClick={() => setSelectedItem(null)}>✕</button>
+        {stats && (
+          <div className="knowledge-stats">
+            <div className="stat-item">
+              <span className="stat-number">{stats.totalItems}</span>
+              <span className="stat-label">Total</span>
             </div>
-            <div className="modal-meta">
-              <span className="item-type">{typeLabels[selectedItem.type]}</span>
-              <span>Criado: {formatDate(selectedItem.createdAt)}</span>
-              {selectedItem.updatedAt !== selectedItem.createdAt && (
-                <span>Atualizado: {formatDate(selectedItem.updatedAt)}</span>
-              )}
+            <div className="stat-item">
+              <span className="stat-number">{stats.totalWordsIndexed}</span>
+              <span className="stat-label">Palavras</span>
             </div>
-            <div className="modal-content-body">
-              <div className="content-text">{selectedItem.content}</div>
-              {selectedItem.url && (
-                <div className="url-section">
-                  <strong>URL:</strong> 
-                  <a href={selectedItem.url} target="_blank" rel="noopener noreferrer">
-                    {selectedItem.url}
-                  </a>
-                </div>
-              )}
-              {selectedItem.tags.length > 0 && (
-                <div className="tags-section">
-                  <strong>Tags:</strong>
-                  <div className="tags">
-                    {selectedItem.tags.map(tag => (
-                      <span key={tag} className="tag">{tag}</span>
-                    ))}
+            <div className="stat-item">
+              <span className="stat-number">{stats.itemsByType?.post_summary || 0}</span>
+              <span className="stat-label">Posts</span>
+            </div>
+            <div className="stat-item">
+              <span className="stat-number">{stats.itemsByType?.note || 0}</span>
+              <span className="stat-label">Notas</span>
+            </div>
+          </div>
+        )}
+
+        <div className="knowledge-controls">
+          <div className="search-section">
+            <input
+              type="text"
+              placeholder="Buscar no conhecimento..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              className="type-filter"
+            >
+              <option value="">Todos os tipos</option>
+              {Object.entries(typeLabels).map(([type, label]) => (
+                <option key={type} value={type}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="action-buttons">
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="add-button"
+              disabled={isLoading}
+            >
+              📝 Adicionar Nota
+            </button>
+            <button
+              onClick={() => setShowPostSummaryModal(true)}
+              className="post-button"
+              disabled={isLoading}
+            >
+              📰 Resumir Post
+            </button>
+          </div>
+        </div>
+
+        {showAddForm && (
+          <div className="add-form">
+            <h3>Adicionar Novo Item</h3>
+            <input
+              type="text"
+              placeholder="Título"
+              value={newItem.title}
+              onChange={(e) => setNewItem({ ...newItem, title: e.target.value })}
+              className="form-input"
+            />
+            <select
+              value={newItem.type}
+              onChange={(e) => setNewItem({ ...newItem, type: e.target.value as any })}
+              className="form-select"
+            >
+              {Object.entries(typeLabels).map(([type, label]) => (
+                <option key={type} value={type}>{label}</option>
+              ))}
+            </select>
+            <textarea
+              placeholder="Conteúdo"
+              value={newItem.content}
+              onChange={(e) => setNewItem({ ...newItem, content: e.target.value })}
+              className="form-textarea"
+              rows={4}
+            />
+            <input
+              type="text"
+              placeholder="Tags (separadas por vírgula)"
+              value={newItem.tags}
+              onChange={(e) => setNewItem({ ...newItem, tags: e.target.value })}
+              className="form-input"
+            />
+            <input
+              type="url"
+              placeholder="URL (opcional)"
+              value={newItem.url}
+              onChange={(e) => setNewItem({ ...newItem, url: e.target.value })}
+              className="form-input"
+            />
+            <div className="form-buttons">
+              <button onClick={handleAddItem} className="save-button" disabled={isLoading}>
+                💾 Salvar
+              </button>
+              <button onClick={() => setShowAddForm(false)} className="cancel-button">
+                ❌ Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="knowledge-content">
+          {isSearching && <div className="loading">🔍 Buscando...</div>}
+          
+          {searchQuery && searchResults.length > 0 && (
+            <div className="search-results">
+              <h3>Resultados da Busca ({searchResults.length})</h3>
+              {searchResults.map((result) => (
+                <div
+                  key={result.item.id}
+                  className="knowledge-item search-result"
+                  onClick={() => setSelectedItem(result.item)}
+                >
+                  <div className="item-header">
+                    <span className="item-type">{typeLabels[result.item.type]}</span>
+                    <span className="relevance-score">Relevância: {result.relevanceScore}</span>
+                  </div>
+                  <h4>{result.item.title}</h4>
+                  <div className="item-content" dangerouslySetInnerHTML={{ __html: result.highlightedContent }} />
+                  <div className="item-meta">
+                    <span>{formatDate(result.item.createdAt)}</span>
+                    {result.item.tags.length > 0 && (
+                      <div className="tags">
+                        {result.item.tags.map(tag => (
+                          <span key={tag} className="tag">{tag}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+              ))}
+            </div>
+          )}
+
+          {!searchQuery && knowledgeItems.length > 0 && (
+            <div className="knowledge-list">
+              <h3>Itens Recentes</h3>
+              {knowledgeItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="knowledge-item"
+                  onClick={() => setSelectedItem(item)}
+                >
+                  <div className="item-header">
+                    <span className="item-type">{typeLabels[item.type]}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteItem(item.id);
+                      }}
+                      className="delete-button"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                  <h4>{item.title}</h4>
+                  <div className="item-content">{renderContent(item.content)}</div>
+                  <div className="item-meta">
+                    <span>{formatDate(item.createdAt)}</span>
+                    {item.tags.length > 0 && (
+                      <div className="tags">
+                        {item.tags.map(tag => (
+                          <span key={tag} className="tag">{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!searchQuery && knowledgeItems.length === 0 && !isLoading && (
+            <div className="empty-state">
+              <h3>📚 Nenhum conhecimento salvo</h3>
+              <p>Comece adicionando notas, salvando resumos de posts interessantes ou deixe a IA salvar suas conversas automaticamente.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Modal de Resumo de Post */}
+        {showPostSummaryModal && (
+          <div className="knowledge-modal" onClick={resetPostSummaryForm}>
+            <div className="modal-content post-summary-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>📰 Resumir Post</h3>
+                <button onClick={resetPostSummaryForm}>✕</button>
+              </div>
+              
+              <div className="modal-body">
+                <div className="form-section">
+                  <label>Título do Post *</label>
+                  <input
+                    type="text"
+                    placeholder="Digite o título do post..."
+                    value={postSummaryForm.title}
+                    onChange={(e) => setPostSummaryForm({ ...postSummaryForm, title: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-section">
+                  <div className="content-type-toggle">
+                    <label>
+                      <input
+                        type="radio"
+                        name="contentType"
+                        checked={!postSummaryForm.isUrl}
+                        onChange={() => setPostSummaryForm({ ...postSummaryForm, isUrl: false, content: '' })}
+                      />
+                      Conteúdo Texto
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        name="contentType"
+                        checked={postSummaryForm.isUrl}
+                        onChange={() => setPostSummaryForm({ ...postSummaryForm, isUrl: true, content: '' })}
+                      />
+                      URL do Post
+                    </label>
+                  </div>
+                </div>
+
+                <div className="form-section">
+                  <label>{postSummaryForm.isUrl ? 'URL do Post *' : 'Conteúdo do Post *'}</label>
+                  {postSummaryForm.isUrl ? (
+                    <input
+                      type="url"
+                      placeholder="https://exemplo.com/post"
+                      value={postSummaryForm.content}
+                      onChange={(e) => setPostSummaryForm({ ...postSummaryForm, content: e.target.value })}
+                      className="form-input"
+                    />
+                  ) : (
+                    <textarea
+                      placeholder="Cole o conteúdo do post aqui..."
+                      value={postSummaryForm.content}
+                      onChange={(e) => setPostSummaryForm({ ...postSummaryForm, content: e.target.value })}
+                      className="form-textarea"
+                      rows={6}
+                    />
+                  )}
+                </div>
+
+                <div className="form-section">
+                  <label>URL de Referência (opcional)</label>
+                  <input
+                    type="url"
+                    placeholder="https://fonte-original.com"
+                    value={postSummaryForm.url}
+                    onChange={(e) => setPostSummaryForm({ ...postSummaryForm, url: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-section">
+                  <label>Tags (separadas por vírgula)</label>
+                  <input
+                    type="text"
+                    placeholder="tecnologia, ia, desenvolvimento, tutorial"
+                    value={postSummaryForm.tags}
+                    onChange={(e) => setPostSummaryForm({ ...postSummaryForm, tags: e.target.value })}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  onClick={handleSavePostSummary}
+                  className="save-button"
+                  disabled={isLoading || !postSummaryForm.title.trim() || !postSummaryForm.content.trim()}
+                >
+                  {isLoading ? '⏳ Processando...' : '🤖 Gerar Resumo com IA'}
+                </button>
+                <button onClick={resetPostSummaryForm} className="cancel-button">
+                  ❌ Cancelar
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {isLoading && <div className="loading-overlay">⏳ Carregando...</div>}
+        {selectedItem && (
+          <div className="knowledge-modal" onClick={() => setSelectedItem(null)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{selectedItem.title}</h3>
+                <button onClick={() => setSelectedItem(null)}>✕</button>
+              </div>
+              <div className="modal-meta">
+                <span className="item-type">{typeLabels[selectedItem.type]}</span>
+                <span>Criado: {formatDate(selectedItem.createdAt)}</span>
+                {selectedItem.updatedAt !== selectedItem.createdAt && (
+                  <span>Atualizado: {formatDate(selectedItem.updatedAt)}</span>
+                )}
+              </div>
+              <div className="modal-content-body">
+                <div className="content-text">{selectedItem.content}</div>
+                {selectedItem.url && (
+                  <div className="url-section">
+                    <strong>URL:</strong> 
+                    <a href={selectedItem.url} target="_blank" rel="noopener noreferrer">
+                      {selectedItem.url}
+                    </a>
+                  </div>
+                )}
+                {selectedItem.tags.length > 0 && (
+                  <div className="tags-section">
+                    <strong>Tags:</strong>
+                    <div className="tags">
+                      {selectedItem.tags.map(tag => (
+                        <span key={tag} className="tag">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isLoading && <div className="loading-overlay">⏳ Carregando...</div>}
+      </div>
     </div>
   );
 };

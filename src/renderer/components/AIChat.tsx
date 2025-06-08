@@ -161,7 +161,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isVisible, onClose }) => {
           
           <div className="ai-chat-tools-indicator">
             <span className="ai-chat-tools-icon">🛠️</span>
-            <span>Ferramentas ativas: Email, Tarefas, Notícias, Conhecimento, Sistema</span>
+            <span>Ferramentas ativas: Email, Tarefas Completas, Notícias, Conhecimento, Sistema, Build</span>
           </div>
         </form>
       </div>

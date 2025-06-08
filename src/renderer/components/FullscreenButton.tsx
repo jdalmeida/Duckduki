@@ -3,9 +3,10 @@ import './FullscreenButton.css';
 
 interface FullscreenButtonProps {
   className?: string;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
-export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = '' }) => {
+export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = '', onFullscreenChange }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -20,6 +21,7 @@ export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = 
       const result = await window.electronAPI.getFullscreenStatus();
       if (result.success) {
         setIsFullscreen(result.isFullScreen);
+        onFullscreenChange?.(result.isFullScreen);
       }
     } catch (error) {
       console.error('Erro ao verificar status da tela inteira:', error);
@@ -32,6 +34,7 @@ export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = 
       const result = await window.electronAPI.toggleFullscreen();
       if (result.success) {
         setIsFullscreen(result.isFullScreen);
+        onFullscreenChange?.(result.isFullScreen);
         console.log(`✅ Tela cheia ${result.isFullScreen ? 'ativada' : 'desativada'}`);
       } else {
         console.error('❌ Erro ao alternar tela inteira:', result.error);

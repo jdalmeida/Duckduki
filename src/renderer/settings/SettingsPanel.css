@@ -193,6 +193,17 @@
   background: #fed7d7;
 }
 
+/* Estilos para inicialização automática */
+.auto-launch-controls {
+  margin: 16px 0;
+}
+
+.status-warning {
+  color: #f6ad55;
+  font-weight: 600;
+  font-size: 14px;
+}
+
 /* Responsividade */
 @media (max-width: 400px) {
   .settings-header, .settings-content {

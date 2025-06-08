@@ -72,6 +72,11 @@ export class KnowledgeService {
     
     const results: KnowledgeSearchResult[] = [];
 
+    // Função para escapar caracteres especiais de regex
+    const escapeRegExp = (string: string) => {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    };
+
     for (const item of items) {
       if (type && item.type !== type) continue;
 
@@ -80,8 +85,9 @@ export class KnowledgeService {
       
       // Calcular pontuação de relevância
       for (const term of searchTerms) {
-        const titleMatches = (item.title.toLowerCase().match(new RegExp(term, 'g')) || []).length;
-        const contentMatches = (item.content.toLowerCase().match(new RegExp(term, 'g')) || []).length;
+        const escapedTerm = escapeRegExp(term);
+        const titleMatches = (item.title.toLowerCase().match(new RegExp(escapedTerm, 'g')) || []).length;
+        const contentMatches = (item.content.toLowerCase().match(new RegExp(escapedTerm, 'g')) || []).length;
         const tagMatches = item.tags.filter(tag => tag.toLowerCase().includes(term)).length;
         
         relevanceScore += titleMatches * 3 + contentMatches * 1 + tagMatches * 2;
@@ -91,7 +97,8 @@ export class KnowledgeService {
         // Criar destaque do conteúdo
         let highlightedContent = item.content.substring(0, 200);
         for (const term of searchTerms) {
-          const regex = new RegExp(term, 'gi');
+          const escapedTerm = escapeRegExp(term);
+          const regex = new RegExp(escapedTerm, 'gi');
           highlightedContent = highlightedContent.replace(regex, `**${term}**`);
         }
 
