@@ -13,9 +13,27 @@ interface SettingsPanelProps {
   hasGroqKey: boolean;
   onEmailConfigSet: (provider: 'gmail' | 'outlook' | 'custom', email: string, password: string, customConfig?: { host: string; port: number; tls: boolean }) => void;
   hasEmailConfig: boolean;
+  onAIConfigSet?: (provider: 'groq' | 'openai' | 'google', apiKey: string, model?: string) => void;
+  onAIProviderChange?: (provider: 'groq' | 'openai' | 'google') => void;
+  aiConfig?: {
+    provider: 'groq' | 'openai' | 'google';
+    model?: string;
+    hasGroqKey: boolean;
+    hasOpenAIKey: boolean;
+    hasGoogleKey: boolean;
+  };
 }
 
-const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, hasGroqKey, onEmailConfigSet, hasEmailConfig }) => {
+const SettingsPanel: React.FC<SettingsPanelProps> = ({ 
+  onClose, 
+  onGroqKeySet, 
+  hasGroqKey, 
+  onEmailConfigSet, 
+  hasEmailConfig,
+  onAIConfigSet,
+  onAIProviderChange,
+  aiConfig
+}) => {
   const [groqKey, setGroqKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [emailProvider, setEmailProvider] = useState<'gmail' | 'outlook' | 'custom'>('gmail');
@@ -35,6 +53,21 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
   const [autoLaunchEnabled, setAutoLaunchEnabled] = useState(false);
   const [autoLaunchSupported, setAutoLaunchSupported] = useState(false);
   const [autoLaunchLoading, setAutoLaunchLoading] = useState(false);
+
+  // Estados para configuração de IA
+  const [selectedProvider, setSelectedProvider] = useState<'groq' | 'openai' | 'google'>(aiConfig?.provider || 'groq');
+  const [openaiKey, setOpenaiKey] = useState('');
+  const [googleKey, setGoogleKey] = useState('');
+  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
+  const [showGoogleKey, setShowGoogleKey] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<string>(aiConfig?.model || '');
+  
+  // Modelos disponíveis para cada provedor
+  const providerModels = {
+    groq: ['llama3-8b-8192', 'llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma-7b-it'],
+    openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'],
+    google: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.0-pro']
+  };
 
   // Carregar status da inicialização automática
   useEffect(() => {
@@ -104,6 +137,98 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
     }
   };
 
+  const handleAIProviderConfigSubmit = async (provider: 'groq' | 'openai' | 'google') => {
+    let apiKey = '';
+    
+    switch (provider) {
+      case 'groq':
+        apiKey = groqKey.trim();
+        break;
+      case 'openai':
+        apiKey = openaiKey.trim();
+        break;
+      case 'google':
+        apiKey = googleKey.trim();
+        break;
+    }
+
+    if (!apiKey) return;
+
+    try {
+      // Configurar chave específica do provedor
+      switch (provider) {
+        case 'groq':
+          await window.electronAPI.setGroqKey(apiKey);
+          break;
+        case 'openai':
+          await window.electronAPI.setOpenAIKey(apiKey);
+          break;
+        case 'google':
+          await window.electronAPI.setGoogleKey(apiKey);
+          break;
+      }
+
+      // Configurar como provedor ativo se foi configurado com sucesso
+      await window.electronAPI.setAIConfig(provider, selectedModel);
+      
+      // Limpar campo
+      switch (provider) {
+        case 'groq':
+          setGroqKey('');
+          break;
+        case 'openai':
+          setOpenaiKey('');
+          break;
+        case 'google':
+          setGoogleKey('');
+          break;
+      }
+
+      // Atualizar provedor selecionado
+      setSelectedProvider(provider);
+      
+      // Notificar callback se existir
+      if (onAIProviderChange) {
+        onAIProviderChange(provider);
+      }
+    } catch (error) {
+      console.error('Erro ao configurar provedor:', error);
+    }
+  };
+
+  const handleProviderChange = (provider: 'groq' | 'openai' | 'google') => {
+    setSelectedProvider(provider);
+    // Atualizar modelo padrão para o novo provedor
+    const defaultModels = {
+      groq: 'llama3-8b-8192',
+      openai: 'gpt-4o-mini',
+      google: 'gemini-1.5-flash'
+    };
+    setSelectedModel(defaultModels[provider]);
+    
+    if (onAIProviderChange) {
+      onAIProviderChange(provider);
+    }
+  };
+
+  const getProviderStatus = (provider: 'groq' | 'openai' | 'google') => {
+    if (!aiConfig) return false;
+    switch (provider) {
+      case 'groq':
+        return aiConfig.hasGroqKey;
+      case 'openai':
+        return aiConfig.hasOpenAIKey;
+      case 'google':
+        return aiConfig.hasGoogleKey;
+      default:
+        return false;
+    }
+  };
+
+  const isActiveProvider = (provider: 'groq' | 'openai' | 'google') => {
+    return aiConfig?.provider === provider;
+  };
+
   return (
     <div className="settings-panel">
       <div className="settings-header">
@@ -149,6 +274,156 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
               <li>Vá para "API Keys" e crie uma nova chave</li>
               <li>Cole a chave aqui</li>
             </ol>
+          </div>
+        </div>
+
+        <div className="setting-section">
+          <h3>🤖 Configuração de IA</h3>
+          <p className="setting-description">
+            Escolha seu provedor de IA preferido e configure as chaves de API. 
+            Você pode alternar entre diferentes provedores a qualquer momento.
+          </p>
+
+          {/* Seletor de Provedor */}
+          <div className="ai-provider-selector">
+            <h4>Provedor Ativo:</h4>
+            <div className="provider-tabs">
+              {(['groq', 'openai', 'google'] as const).map((provider) => (
+                <button
+                  key={provider}
+                  onClick={() => handleProviderChange(provider)}
+                  className={`provider-tab ${selectedProvider === provider ? 'active' : ''} ${getProviderStatus(provider) ? 'configured' : ''} ${isActiveProvider(provider) ? 'active' : ''}`}
+                >
+                  <div className="provider-info">
+                    <span className="provider-name">
+                      {provider === 'groq' && '⚡ Groq'}
+                      {provider === 'openai' && '🔥 OpenAI'}
+                      {provider === 'google' && '🌟 Google'}
+                      {isActiveProvider(provider) && ' (ATIVO)'}
+                    </span>
+                    {getProviderStatus(provider) && <span className="status-indicator">✅</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Configuração de API Key */}
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            handleAIProviderConfigSubmit(selectedProvider);
+          }} className="key-form">
+            <div className="ai-config-section">
+              <h4>
+                Chave API {selectedProvider === 'groq' && 'Groq'}
+                {selectedProvider === 'openai' && 'OpenAI'}
+                {selectedProvider === 'google' && 'Google'}
+                {getProviderStatus(selectedProvider) && <span className="status-ok"> ✅ Configurada</span>}
+              </h4>
+              
+              <div className="input-group">
+                <input
+                  type={
+                    (selectedProvider === 'groq' && showKey) ||
+                    (selectedProvider === 'openai' && showOpenaiKey) ||
+                    (selectedProvider === 'google' && showGoogleKey)
+                      ? "text" : "password"
+                  }
+                  value={
+                    selectedProvider === 'groq' ? groqKey :
+                    selectedProvider === 'openai' ? openaiKey :
+                    googleKey
+                  }
+                  onChange={(e) => {
+                    if (selectedProvider === 'groq') setGroqKey(e.target.value);
+                    else if (selectedProvider === 'openai') setOpenaiKey(e.target.value);
+                    else setGoogleKey(e.target.value);
+                  }}
+                  placeholder={`Cole sua chave da API ${selectedProvider === 'groq' ? 'Groq' : selectedProvider === 'openai' ? 'OpenAI' : 'Google'} aqui...`}
+                  className="key-input"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedProvider === 'groq') setShowKey(!showKey);
+                    else if (selectedProvider === 'openai') setShowOpenaiKey(!showOpenaiKey);
+                    else setShowGoogleKey(!showGoogleKey);
+                  }}
+                  className="toggle-visibility"
+                >
+                  {((selectedProvider === 'groq' && showKey) ||
+                    (selectedProvider === 'openai' && showOpenaiKey) ||
+                    (selectedProvider === 'google' && showGoogleKey)) ? '🙈' : '👁️'}
+                </button>
+              </div>
+
+              {/* Seletor de Modelo */}
+              <div className="input-group" style={{ marginTop: '12px' }}>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="key-input"
+                  style={{ maxWidth: '300px' }}
+                >
+                  <option value="">Modelo padrão</option>
+                  {providerModels[selectedProvider].map(model => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button 
+                type="submit" 
+                className="save-btn" 
+                disabled={
+                  (selectedProvider === 'groq' && !groqKey.trim()) ||
+                  (selectedProvider === 'openai' && !openaiKey.trim()) ||
+                  (selectedProvider === 'google' && !googleKey.trim())
+                }
+              >
+                Salvar Configuração
+              </button>
+            </div>
+          </form>
+
+          <div className="help-text">
+            <div className="provider-help">
+              {selectedProvider === 'groq' && (
+                <>
+                  <p>📖 Para obter sua chave Groq:</p>
+                  <ol>
+                    <li>Acesse <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">console.groq.com</a></li>
+                    <li>Faça login ou crie uma conta</li>
+                    <li>Vá para "API Keys" e crie uma nova chave</li>
+                    <li>Cole a chave aqui</li>
+                  </ol>
+                </>
+              )}
+              
+              {selectedProvider === 'openai' && (
+                <>
+                  <p>📖 Para obter sua chave OpenAI:</p>
+                  <ol>
+                    <li>Acesse <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">platform.openai.com</a></li>
+                    <li>Faça login em sua conta OpenAI</li>
+                    <li>Clique em "Create new secret key"</li>
+                    <li>Cole a chave aqui (inicia com sk-)</li>
+                  </ol>
+                </>
+              )}
+              
+              {selectedProvider === 'google' && (
+                <>
+                  <p>📖 Para obter sua chave Google:</p>
+                  <ol>
+                    <li>Acesse <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com</a></li>
+                    <li>Faça login com sua conta Google</li>
+                    <li>Clique em "Create API key"</li>
+                    <li>Cole a chave aqui</li>
+                  </ol>
+                </>
+              )}
+            </div>
           </div>
         </div>
 

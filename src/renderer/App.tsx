@@ -14,11 +14,19 @@ const App: React.FC = () => {
   const [hasGroqKey, setHasGroqKey] = useState(false);
   const [hasEmailConfig, setHasEmailConfig] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [aiConfig, setAiConfig] = useState<{
+    provider: 'groq' | 'openai' | 'google';
+    model?: string;
+    hasGroqKey: boolean;
+    hasOpenAIKey: boolean;
+    hasGoogleKey: boolean;
+  } | null>(null);
 
   useEffect(() => {
     checkGroqKey();
     checkEmailConfig();
     checkFullscreenStatus();
+    loadAIConfig();
     
     // Polling periódico para sincronizar estado fullscreen (especialmente importante no Windows)
     const fullscreenSyncInterval = setInterval(() => {
@@ -114,6 +122,23 @@ const App: React.FC = () => {
     }
   };
 
+  const loadAIConfig = async () => {
+    try {
+      const result = await window.electronAPI.getAIConfig();
+      if (result.success) {
+        setAiConfig({
+          provider: result.provider,
+          model: result.model,
+          hasGroqKey: result.hasGroqKey,
+          hasOpenAIKey: result.hasOpenAIKey,
+          hasGoogleKey: result.hasGoogleKey
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configuração de IA:', error);
+    }
+  };
+
   const checkFullscreenStatus = async () => {
     try {
       const result = await window.electronAPI.getFullscreenStatus();
@@ -183,6 +208,45 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAIConfigSet = async (provider: 'groq' | 'openai' | 'google', apiKey: string, model?: string) => {
+    try {
+      // Configurar chave específica do provedor
+      let result;
+      switch (provider) {
+        case 'groq':
+          result = await window.electronAPI.setGroqKey(apiKey);
+          break;
+        case 'openai':
+          result = await window.electronAPI.setOpenAIKey(apiKey);
+          break;
+        case 'google':
+          result = await window.electronAPI.setGoogleKey(apiKey);
+          break;
+      }
+
+      if (result && result.success) {
+        // Configurar como provedor ativo
+        await window.electronAPI.setAIConfig(provider, model);
+        
+        // Recarregar configuração
+        await loadAIConfig();
+      } else {
+        throw new Error(result?.error || 'Erro desconhecido');
+      }
+    } catch (error) {
+      console.error('Erro ao configurar IA:', error);
+    }
+  };
+
+  const handleAIProviderChange = async (provider: 'groq' | 'openai' | 'google') => {
+    try {
+      await window.electronAPI.setAIConfig(provider);
+      await loadAIConfig();
+    } catch (error) {
+      console.error('Erro ao mudar provedor de IA:', error);
+    }
+  };
+
   if (showSettings) {
     return (
       <SettingsPanel
@@ -191,6 +255,9 @@ const App: React.FC = () => {
         hasGroqKey={hasGroqKey}
         onEmailConfigSet={handleEmailConfigSet}
         hasEmailConfig={hasEmailConfig}
+        onAIConfigSet={handleAIConfigSet}
+        onAIProviderChange={handleAIProviderChange}
+        aiConfig={aiConfig || undefined}
       />
     );
   }

@@ -18,8 +18,12 @@ export interface ElectronAPI {
   getHistoryStats: () => Promise<any>;
   cleanupHistory: () => Promise<any>;
   
-  // Configurações
+  // Configurações de IA
   setGroqKey: (apiKey: string) => Promise<any>;
+  setOpenAIKey: (apiKey: string) => Promise<any>;
+  setGoogleKey: (apiKey: string) => Promise<any>;
+  setAIConfig: (provider: 'groq' | 'openai' | 'google', model?: string) => Promise<any>;
+  getAIConfig: () => Promise<any>;
   hasGroqKey: () => Promise<any>;
   testStorage: () => Promise<any>;
   clearData: () => Promise<any>;
@@ -158,9 +162,21 @@ const electronAPI: ElectronAPI = {
   cleanupHistory: () => 
     ipcRenderer.invoke('cleanup-history'),
   
-  // Configurações
+  // Configurações de IA
   setGroqKey: (apiKey: string) => 
     ipcRenderer.invoke('set-groq-key', apiKey),
+  
+  setOpenAIKey: (apiKey: string) => 
+    ipcRenderer.invoke('set-openai-key', apiKey),
+  
+  setGoogleKey: (apiKey: string) => 
+    ipcRenderer.invoke('set-google-key', apiKey),
+  
+  setAIConfig: (provider: 'groq' | 'openai' | 'google', model?: string) => 
+    ipcRenderer.invoke('set-ai-config', provider, model),
+  
+  getAIConfig: () => 
+    ipcRenderer.invoke('get-ai-config'),
   
   hasGroqKey: () => 
     ipcRenderer.invoke('has-groq-key'),

@@ -1,4 +1,3 @@
-import { GroqClient } from './groqClient';
 import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
@@ -66,7 +65,7 @@ export interface TaskServiceResponse {
 
 class TaskService {
   private tasks: Map<string, Task> = new Map();
-  private groqClient: GroqClient | null = null;
+  private aiManager: any | null = null; // Temporariamente como any para evitar circular import
   private dataPath: string;
 
   constructor() {
@@ -75,8 +74,8 @@ class TaskService {
     this.migrateTasksForTimeTracking(); // Migrar tarefas existentes
   }
 
-  setGroqClient(client: GroqClient) {
-    this.groqClient = client;
+  setAIManager(aiManager: any) {
+    this.aiManager = aiManager;
   }
 
   private loadTasks(): void {
@@ -106,7 +105,7 @@ class TaskService {
   }
 
   async analyzeTaskWithAI(input: string): Promise<TaskAnalysis> {
-    if (!this.groqClient) {
+    if (!this.aiManager) {
       throw new Error('IA não configurada');
     }
 
@@ -141,7 +140,7 @@ Considere:
 Seja preciso e objetivo. Retorne apenas o JSON.`;
 
     try {
-      const response = await this.groqClient.processCommand(prompt);
+      const response = await this.aiManager.processCommand(prompt);
       const analysis = JSON.parse(response);
       
       // Validar e normalizar dados
@@ -319,52 +318,63 @@ Seja preciso e objetivo. Retorne apenas o JSON.`;
   }
 
   async getTaskSuggestions(): Promise<TaskServiceResponse> {
-    if (!this.groqClient) {
+    if (!this.aiManager) {
       return {
         success: false,
         error: 'IA não configurada'
       };
     }
 
-    try {
-      const pendingTasks = this.getTasks({ status: 'pendente' }).tasks || [];
-      
-      if (pendingTasks.length === 0) {
-        return {
-          success: true,
-          tasks: []
-        };
-      }
+    const tasks = Array.from(this.tasks.values());
+    const pendingTasks = tasks.filter(task => task.status === 'pendente');
+    
+    if (pendingTasks.length === 0) {
+      return {
+        success: true,
+        tasks: []
+      };
+    }
 
-      const prompt = `
-Baseado nas seguintes tarefas pendentes, sugira insights e otimizações:
+    const prompt = `
+Analise as seguintes tarefas pendentes e sugira uma ordem de execução otimizada:
 
 TAREFAS:
 ${pendingTasks.map(task => `
-- ${task.title} (Urgência: ${task.urgency}/10, Facilidade: ${task.ease}/10)
+- ${task.title}
+  Urgência: ${task.urgency}/10
+  Facilidade: ${task.ease}/10
   Categoria: ${task.category}
+  Prazo: ${task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'sem prazo'}
   Tempo estimado: ${task.estimatedTime}
 `).join('\n')}
 
-Analise e retorne sugestões sobre:
-1. Qual tarefa fazer primeiro e por quê
-2. Tarefas que podem ser agrupadas
-3. Tarefas que podem ser delegadas ou eliminadas
-4. Alertas sobre possíveis conflitos de prazo
+Considere:
+1. Urgência vs facilidade
+2. Prazos próximos
+3. Sequência lógica de dependências
+4. Eficiência energética (intercalar tarefas difíceis com fáceis)
 
-Seja conciso e prático.`;
+Retorne as tarefas reordenadas por prioridade de execução.
+`;
 
-      const suggestions = await this.groqClient.processCommand(prompt);
+    try {
+      const suggestions = await this.aiManager.processCommand(prompt);
       
+      // Para este exemplo, vamos retornar as tarefas ordenadas por prioridade simples
+      const sortedTasks = pendingTasks.sort((a, b) => {
+        // Primeiro por urgência, depois por facilidade
+        if (a.urgency !== b.urgency) return b.urgency - a.urgency;
+        return b.ease - a.ease;
+      });
+
       return {
         success: true,
-        tasks: [], // As sugestões virão como texto na resposta
-        error: suggestions // Reutilizando campo error para as sugestões
+        tasks: sortedTasks.slice(0, 5) // Top 5 sugestões
       };
     } catch (error) {
       return {
         success: false,
-        error: error.message || 'Erro ao gerar sugestões'
+        error: 'Erro ao obter sugestões de tarefas'
       };
     }
   }

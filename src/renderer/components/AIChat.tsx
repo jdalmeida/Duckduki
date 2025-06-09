@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './AIChat.css';
 
 interface AIChatProps {
@@ -103,7 +105,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isVisible, onClose }) => {
               </div>
               <div className="ai-chat-message-content">
                 <div className="ai-chat-message-text">
-                  {message.content}
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
                 </div>
                 <div className="ai-chat-message-time">
                   {new Date(message.createdAt || Date.now()).toLocaleTimeString('pt-BR', {

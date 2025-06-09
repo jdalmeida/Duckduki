@@ -1,5 +1,7 @@
 import { generateText, streamText } from 'ai';
-import { createGroq, groq } from '@ai-sdk/groq';
+import { createGroq } from '@ai-sdk/groq';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 import { EmailService } from './emailService';
 import { KnowledgeService } from './knowledgeService';
@@ -7,6 +9,7 @@ import { taskService } from './taskService';
 import { feedService } from './feedService';
 import { ProcessMonitor } from './processMonitor';
 import { DeployService } from './deployService';
+import { AIManager } from './aiManager';
 
 export interface ToolResult {
   success: boolean;
@@ -16,7 +19,7 @@ export interface ToolResult {
 }
 
 export class AIToolsService {
-  private groqApiKey: string;
+  private aiManager: AIManager;
   private emailService: EmailService;
   private knowledgeService: KnowledgeService;
   private taskService: typeof taskService;
@@ -25,15 +28,16 @@ export class AIToolsService {
   private deployService: DeployService;
 
   constructor(
-    groqApiKey: string,
+    groqApiKey: string, // Mantido para compatibilidade
     emailService: EmailService,
     knowledgeService: KnowledgeService,
     taskServiceInstance: typeof taskService,
     feedServiceInstance: typeof feedService,
     processMonitor: ProcessMonitor,
-    deployService: DeployService
+    deployService: DeployService,
+    aiManager?: AIManager
   ) {
-    this.groqApiKey = groqApiKey;
+    this.aiManager = aiManager!; // Será definido pelo setAIManager
     this.emailService = emailService;
     this.knowledgeService = knowledgeService;
     this.taskService = taskServiceInstance;
@@ -42,16 +46,53 @@ export class AIToolsService {
     this.deployService = deployService;
   }
 
+  setAIManager(aiManager: AIManager) {
+    this.aiManager = aiManager;
+  }
+
+  private securityManager: any;
+
+  setSecurityManager(securityManager: any) {
+    this.securityManager = securityManager;
+  }
+
+  private async getAIModel() {
+    const activeProvider = this.aiManager.getActiveProvider();
+    const apiKeys = {
+      groq: await this.securityManager.getGroqKey(),
+      openai: await this.securityManager.getOpenAIKey(),
+      google: await this.securityManager.getGoogleKey()
+    };
+
+    switch (activeProvider) {
+      case 'groq':
+        if (!apiKeys.groq) throw new Error('Chave Groq não configurada');
+        const groqModel = createGroq({ apiKey: apiKeys.groq });
+        return groqModel('llama3-8b-8192');
+        
+      case 'openai':
+        if (!apiKeys.openai) throw new Error('Chave OpenAI não configurada');
+        const openaiModel = createOpenAI({ apiKey: apiKeys.openai });
+        return openaiModel('gpt-4o-mini');
+        
+      case 'google':
+        if (!apiKeys.google) throw new Error('Chave Google não configurada');
+        const googleModel = createGoogleGenerativeAI({ apiKey: apiKeys.google });
+        return googleModel('gemini-1.5-flash');
+        
+      default:
+        throw new Error(`Provedor não suportado: ${activeProvider}`);
+    }
+  }
+
   async processWithTools(
     userMessage: string, 
     chatHistory: Array<{ role: string; content: string }> = []
   ): Promise<string> {
     try {
-      const groqModel = createGroq({
-        apiKey: this.groqApiKey,
-      })
+      const groqModel = await this.getAIModel();
       const result = await generateText({
-        model: groqModel('llama3-8b-8192'),
+        model: groqModel,
         maxSteps: 25,
         system: `Você é o Duckduki, um assistente de produtividade inteligente. Você tem acesso a várias ferramentas que pode usar para ajudar o usuário:
 
@@ -262,7 +303,7 @@ Para a descrição das tarefas, Descreva a tarefa, não use palavras como "taref
         ).join('\n');
         
         const finalResponse = await generateText({
-          model: groqModel('llama3-8b-8192'),
+          model: groqModel,
           system: 'Você é o Duckduki. Analise os resultados das ferramentas executadas e forneça uma resposta útil e conversacional ao usuário.',
           messages: [
             { role: 'user', content: userMessage },
@@ -286,12 +327,15 @@ Para a descrição das tarefas, Descreva a tarefa, não use palavras como "taref
     userMessage: string, 
     chatHistory: Array<{ role: string; content: string }> = []
   ) {
-    const groqModel = createGroq({
-      apiKey: this.groqApiKey,
-    });
+    console.log('🔧 [AIToolsService] Iniciando processWithToolsStream');
+    console.log('🎯 [AIToolsService] Provedor ativo:', this.aiManager?.getActiveProvider());
+    
+    try {
+      const aiModel = await this.getAIModel();
+      console.log('✅ [AIToolsService] Modelo obtido com sucesso');
 
-    return streamText({
-      model: groqModel('llama3-8b-8192'),
+            return streamText({
+        model: aiModel,
       system: `Você é o Duckduki, um assistente de produtividade inteligente. Você tem acesso a várias ferramentas que pode usar para ajudar o usuário:
 
 FERRAMENTAS DISPONÍVEIS:
@@ -314,7 +358,12 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
         // === FERRAMENTAS DE EMAIL ===
         getEmailSummary: {
           description: 'Obter resumo dos emails recentes',
-          parameters: z.object({})
+          parameters: z.object({}),
+          execute: async () => {
+            console.log('🔧 [TOOL] Executando getEmailSummary');
+            const result = await this.executeGetEmailSummary();
+            return `📧 ${result.message}`;
+          }
         },
 
         // === FERRAMENTAS DE TAREFAS ===
@@ -322,35 +371,65 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
           description: 'Adicionar uma nova tarefa',
           parameters: z.object({
             description: z.string().describe('Descrição da tarefa')
-          })
+          }),
+          execute: async ({ description }) => {
+            console.log('🔧 [TOOL] Executando addTask:', description);
+            const result = await this.executeAddTask(description);
+            return `✅ ${result.message}`;
+          }
         },
         getTasks: {
           description: 'Listar tarefas com filtros opcionais',
           parameters: z.object({
             status: z.enum(['pendente', 'em_progresso', 'concluida', 'cancelada']).optional(),
             priority: z.enum(['baixa', 'media', 'alta', 'critica']).optional()
-          })
+          }),
+          execute: async ({ status, priority }) => {
+            console.log('🔧 [TOOL] Executando getTasks');
+            const result = await this.executeGetTasks(status, priority);
+            return `📋 ${result.message}\n\n${JSON.stringify(result.data, null, 2)}`;
+          }
         },
         updateTaskStatus: {
           description: 'Atualizar o status de uma tarefa',
           parameters: z.object({
             taskId: z.string().describe('ID da tarefa'),
             status: z.enum(['pendente', 'em_progresso', 'concluida', 'cancelada']).describe('Novo status da tarefa')
-          })
+          }),
+          execute: async ({ taskId, status }) => {
+            console.log('🔧 [TOOL] Executando updateTaskStatus:', taskId, status);
+            const result = await this.executeUpdateTaskStatus(taskId, status);
+            return result.success ? `✅ ${result.message}` : `❌ ${result.error}`;
+          }
         },
         deleteTask: {
           description: 'Deletar uma tarefa',
           parameters: z.object({
             taskId: z.string().describe('ID da tarefa a ser deletada')
-          })
+          }),
+          execute: async ({ taskId }) => {
+            console.log('🔧 [TOOL] Executando deleteTask:', taskId);
+            const result = await this.executeDeleteTask(taskId);
+            return result.success ? `🗑️ ${result.message}` : `❌ ${result.error}`;
+          }
         },
         getTaskStats: {
           description: 'Obter estatísticas das tarefas',
-          parameters: z.object({})
+          parameters: z.object({}),
+          execute: async () => {
+            console.log('🔧 [TOOL] Executando getTaskStats');
+            const result = await this.executeGetTaskStats();
+            return `📊 ${result.message}\n\n${JSON.stringify(result.data, null, 2)}`;
+          }
         },
         getTaskSuggestions: {
           description: 'Obter sugestões de otimização das tarefas',
-          parameters: z.object({})
+          parameters: z.object({}),
+          execute: async () => {
+            console.log('🔧 [TOOL] Executando getTaskSuggestions');
+            const result = await this.executeGetTaskSuggestions();
+            return result.success ? `🧠 ${result.message}` : `❌ ${result.error}`;
+          }
         },
 
         // === FERRAMENTAS DE FEEDS/NOTÍCIAS ===
@@ -359,7 +438,12 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
           parameters: z.object({
             sources: z.array(z.enum(['hackernews', 'reddit', 'github', 'dev.to'])).optional(),
             limit: z.number().optional().default(10)
-          })
+          }),
+          execute: async ({ sources, limit }) => {
+            console.log('🔧 [TOOL] Executando getTechNews');
+            const result = await this.executeGetTechNews(sources, limit);
+            return `📰 ${result.message}\n\n${JSON.stringify(result.data, null, 2)}`;
+          }
         },
 
         // === FERRAMENTAS DE CONHECIMENTO ===
@@ -369,32 +453,62 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
             title: z.string().describe('Título da nota'),
             content: z.string().describe('Conteúdo da nota'),
             tags: z.array(z.string()).optional().describe('Tags para organização')
-          })
+          }),
+          execute: async ({ title, content, tags }) => {
+            console.log('🔧 [TOOL] Executando saveNote:', title);
+            const result = await this.executeSaveNote(title, content, tags);
+            return result.success ? `📝 ${result.message}` : `❌ ${result.error}`;
+          }
         },
         searchKnowledge: {
           description: 'Buscar informações no repositório de conhecimento',
           parameters: z.object({
             query: z.string().describe('Termo de busca'),
             type: z.enum(['note', 'post_summary', 'conversation', 'document', 'code', 'reference']).optional()
-          })
+          }),
+          execute: async ({ query, type }) => {
+            console.log('🔧 [TOOL] Executando searchKnowledge:', query);
+            const result = await this.executeSearchKnowledge(query, type);
+            return `🔍 ${result.message}\n\n${JSON.stringify(result.data, null, 2)}`;
+          }
         },
 
         // === FERRAMENTAS DE SISTEMA ===
         getSystemStatus: {
           description: 'Obter status do sistema (CPU, memória, app ativo)',
-          parameters: z.object({})
+          parameters: z.object({}),
+          execute: async () => {
+            console.log('🔧 [TOOL] Executando getSystemStatus');
+            const result = await this.executeGetSystemStatus();
+            return `💻 ${result.message}`;
+          }
         },
         analyzeCurrentCode: {
           description: 'Analisar o código atual do projeto',
-          parameters: z.object({})
+          parameters: z.object({}),
+          execute: async () => {
+            console.log('🔧 [TOOL] Executando analyzeCurrentCode');
+            const result = await this.executeAnalyzeCurrentCode();
+            return result.success ? `🔍 ${result.message}` : `❌ ${result.error}`;
+          }
         },
         runBuild: {
           description: 'Executar build do projeto',
-          parameters: z.object({})
+          parameters: z.object({}),
+          execute: async () => {
+            console.log('🔧 [TOOL] Executando runBuild');
+            const result = await this.executeRunBuild();
+            return result.success ? `🔨 ${result.message}` : `❌ ${result.error}`;
+          }
         }
       },
-      maxTokens: 1024
+      maxTokens: 1024,
+      maxSteps: 10
     });
+    } catch (error) {
+      console.error('❌ [AIToolsService] Erro em processWithToolsStream:', error);
+      throw error;
+    }
   }
 
   // === IMPLEMENTAÇÕES DAS FERRAMENTAS ===

@@ -52,7 +52,6 @@ export class OAuthServer {
               font-family: Arial, sans-serif; 
               text-align: center; 
               padding: 50px;
-              background: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #fbbc05 100%);
               color: white;
             }
             .container { 
@@ -109,7 +108,6 @@ export class OAuthServer {
               font-family: Arial, sans-serif; 
               text-align: center; 
               padding: 50px;
-              background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
               color: white;
             }
             .container { 

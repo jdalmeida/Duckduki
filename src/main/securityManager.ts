@@ -350,6 +350,238 @@ export class SecurityManager {
     }
   }
 
+  // === OpenAI API Key Management ===
+  async setOpenAIKey(apiKey: string): Promise<void> {
+    try {
+      let saved = false;
+      let method = 'unknown';
+
+      // Tentar keytar primeiro se estiver disponível
+      if (keytar && await this.isKeytarWorking()) {
+        try {
+          await keytar.setPassword(this.serviceName, 'openai-api-key', apiKey);
+          method = 'keytar';
+          saved = true;
+          console.log('✅ Chave OpenAI salva no keychain do sistema');
+        } catch (error) {
+          console.warn('⚠️  Falha ao salvar no keychain, usando fallback');
+        }
+      }
+
+      // Fallback: salvar criptografado no store
+      if (!saved) {
+        this.store.set('openai-api-key-fallback', apiKey);
+        method = 'store';
+        console.log('✅ Chave OpenAI salva no fallback criptografado');
+      }
+
+      this.store.set('hasOpenAIKey', true);
+      this.store.set('openai-storage-method', method);
+      console.log(`🔑 Chave OpenAI configurada (método: ${method})`);
+    } catch (error) {
+      console.error('❌ Erro ao salvar chave OpenAI:', error);
+      throw new Error('Falha ao salvar chave de API');
+    }
+  }
+
+  async getOpenAIKey(): Promise<string | null> {
+    try {
+      const storageMethod = this.store.get('openai-storage-method', 'unknown');
+      console.log(`🔑 Recuperando chave OpenAI (método: ${storageMethod}, plataforma: ${process.platform})`);
+      
+      // Tentar keytar primeiro se foi o método usado
+      if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
+        console.log('🔑 Tentando recuperar do keychain do sistema');
+        const apiKey = await keytar.getPassword(this.serviceName, 'openai-api-key');
+        if (apiKey) {
+          console.log('✅ Chave OpenAI recuperada do keychain');
+          return apiKey;
+        } else {
+          console.log('⚠️  Chave não encontrada no keychain, tentando fallback');
+          return this.store.get('openai-api-key-fallback', null);
+        }
+      } else {
+        // Fallback: recuperar do store criptografado
+        console.log('🔑 Recuperando do fallback criptografado');
+        const fallbackKey = this.store.get('openai-api-key-fallback', null);
+        if (fallbackKey) {
+          console.log('✅ Chave OpenAI recuperada do fallback');
+        } else {
+          console.log('❌ Nenhuma chave encontrada');
+        }
+        return fallbackKey;
+      }
+    } catch (error) {
+      console.error('❌ Erro ao recuperar chave OpenAI:', error);
+      // Tentar fallback em caso de erro
+      console.log('🔑 Tentando fallback após erro');
+      const fallbackKey = this.store.get('openai-api-key-fallback', null);
+      if (fallbackKey) {
+        console.log('✅ Chave recuperada do fallback após erro');
+      }
+      return fallbackKey;
+    }
+  }
+
+  async hasOpenAIKey(): Promise<boolean> {
+    try {
+      const hasKey = this.store.get('hasOpenAIKey', false) as boolean;
+      if (!hasKey) return false;
+      
+      // Verificar se a chave ainda existe
+      const key = await this.getOpenAIKey();
+      return key !== null && key.length > 0;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async removeOpenAIKey(): Promise<void> {
+    try {
+      const storageMethod = this.store.get('openai-storage-method', 'unknown');
+      
+      // Remover do keytar se foi usado
+      if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
+        try {
+          await keytar.deletePassword(this.serviceName, 'openai-api-key');
+          console.log('✅ Chave OpenAI removida do keychain');
+        } catch (error) {
+          console.log('⚠️  Erro ao remover do keychain (pode não existir)');
+        }
+      }
+      
+      // Sempre limpar fallback também
+      this.store.delete('openai-api-key-fallback');
+      this.store.delete('hasOpenAIKey');
+      this.store.delete('openai-storage-method');
+      console.log('✅ Chave OpenAI removida completamente');
+    } catch (error) {
+      console.error('❌ Erro ao remover chave OpenAI:', error);
+      throw new Error('Falha ao remover chave de API');
+    }
+  }
+
+  // === Google API Key Management ===
+  async setGoogleKey(apiKey: string): Promise<void> {
+    try {
+      let saved = false;
+      let method = 'unknown';
+
+      // Tentar keytar primeiro se estiver disponível
+      if (keytar && await this.isKeytarWorking()) {
+        try {
+          await keytar.setPassword(this.serviceName, 'google-api-key', apiKey);
+          method = 'keytar';
+          saved = true;
+          console.log('✅ Chave Google salva no keychain do sistema');
+        } catch (error) {
+          console.warn('⚠️  Falha ao salvar no keychain, usando fallback');
+        }
+      }
+
+      // Fallback: salvar criptografado no store
+      if (!saved) {
+        this.store.set('google-api-key-fallback', apiKey);
+        method = 'store';
+        console.log('✅ Chave Google salva no fallback criptografado');
+      }
+
+      this.store.set('hasGoogleKey', true);
+      this.store.set('google-storage-method', method);
+      console.log(`🔑 Chave Google configurada (método: ${method})`);
+    } catch (error) {
+      console.error('❌ Erro ao salvar chave Google:', error);
+      throw new Error('Falha ao salvar chave de API');
+    }
+  }
+
+  async getGoogleKey(): Promise<string | null> {
+    try {
+      const storageMethod = this.store.get('google-storage-method', 'unknown');
+      console.log(`🔑 Recuperando chave Google (método: ${storageMethod}, plataforma: ${process.platform})`);
+      
+      // Tentar keytar primeiro se foi o método usado
+      if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
+        console.log('🔑 Tentando recuperar do keychain do sistema');
+        const apiKey = await keytar.getPassword(this.serviceName, 'google-api-key');
+        if (apiKey) {
+          console.log('✅ Chave Google recuperada do keychain');
+          return apiKey;
+        } else {
+          console.log('⚠️  Chave não encontrada no keychain, tentando fallback');
+          return this.store.get('google-api-key-fallback', null);
+        }
+      } else {
+        // Fallback: recuperar do store criptografado
+        console.log('🔑 Recuperando do fallback criptografado');
+        const fallbackKey = this.store.get('google-api-key-fallback', null);
+        if (fallbackKey) {
+          console.log('✅ Chave Google recuperada do fallback');
+        } else {
+          console.log('❌ Nenhuma chave encontrada');
+        }
+        return fallbackKey;
+      }
+    } catch (error) {
+      console.error('❌ Erro ao recuperar chave Google:', error);
+      // Tentar fallback em caso de erro
+      console.log('🔑 Tentando fallback após erro');
+      const fallbackKey = this.store.get('google-api-key-fallback', null);
+      if (fallbackKey) {
+        console.log('✅ Chave recuperada do fallback após erro');
+      }
+      return fallbackKey;
+    }
+  }
+
+  async hasGoogleKey(): Promise<boolean> {
+    try {
+      const hasKey = this.store.get('hasGoogleKey', false) as boolean;
+      if (!hasKey) return false;
+      
+      // Verificar se a chave ainda existe
+      const key = await this.getGoogleKey();
+      return key !== null && key.length > 0;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async removeGoogleKey(): Promise<void> {
+    try {
+      const storageMethod = this.store.get('google-storage-method', 'unknown');
+      
+      // Remover do keytar se foi usado
+      if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
+        try {
+          await keytar.deletePassword(this.serviceName, 'google-api-key');
+          console.log('✅ Chave Google removida do keychain');
+        } catch (error) {
+          console.log('⚠️  Erro ao remover do keychain (pode não existir)');
+        }
+      }
+      
+      // Sempre limpar fallback também
+      this.store.delete('google-api-key-fallback');
+      this.store.delete('hasGoogleKey');
+      this.store.delete('google-storage-method');
+      console.log('✅ Chave Google removida completamente');
+    } catch (error) {
+      console.error('❌ Erro ao remover chave Google:', error);
+      throw new Error('Falha ao remover chave de API');
+    }
+  }
+
+  // === AI Provider Configuration ===
+  setAIProviderConfig(config: { provider: 'groq' | 'openai' | 'google'; model?: string }) {
+    this.store.set('aiProviderConfig', config);
+    console.log(`🤖 Configuração de IA salva: ${config.provider} (${config.model || 'modelo padrão'})`);
+  }
+
+  getAIProviderConfig(): { provider: 'groq' | 'openai' | 'google'; model?: string } {
+    return this.store.get('aiProviderConfig', { provider: 'groq' }) as { provider: 'groq' | 'openai' | 'google'; model?: string };
+  }
+
   // Configurações de e-mail (criptografadas)
   setEmailConfig(config: { user: string; password: string; host: string; port: number; tls: boolean }) {
     this.store.set('emailConfig', config);
@@ -453,6 +685,8 @@ export class SecurityManager {
     try {
       // Remover chaves do keychain
       await this.removeGroqKey();
+      await this.removeOpenAIKey();
+      await this.removeGoogleKey();
       
       // Limpar store criptografado
       this.store.clear();

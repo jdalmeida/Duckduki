@@ -33,7 +33,7 @@ export const FullscreenMode: React.FC<FullscreenModeProps> = ({
     <>
       <div className="app-header">
         <div className="header-title">
-          <h1>Duckduki</h1>
+          <h1>🦆 Duckduki</h1>
           <span className={`status-indicator ${hasGroqKey ? 'active' : 'inactive'}`}>
             {hasGroqKey ? '🟢 Ativo' : '🔴 Configure API'}
           </span>

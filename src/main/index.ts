@@ -10,7 +10,7 @@ if (typeof require === 'undefined') {
 
 import { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, globalShortcut, shell } from 'electron';
 import { join } from 'path';
-import { GroqClient } from './groqClient';
+import { AIManager } from './aiManager';
 import { EmailService } from './emailService';
 import { ProcessMonitor } from './processMonitor';
 import { DeployService } from './deployService';
@@ -29,7 +29,7 @@ import { LocalTaskTools } from './aiTools/localTaskTools';
 class CoPilotoDesktop {
   private mainWindow: BrowserWindow | null = null;
   private tray: Tray | null = null;
-  private groqClient: GroqClient | null = null;
+  private aiManager: AIManager;
   private aiToolsService: AIToolsService | null = null;
   private emailService: EmailService;
   private processMonitor: ProcessMonitor;
@@ -52,6 +52,7 @@ class CoPilotoDesktop {
     this.commandPaletteServer = new CommandPaletteServer();
     this.chatAPIServer = new ChatAPIServer();
     this.autoLauncher = new AutoLauncher();
+    this.aiManager = new AIManager();
     
     // Inicializar Google Integration Service
     this.googleIntegrationService = new GoogleIntegrationService();
@@ -62,11 +63,11 @@ class CoPilotoDesktop {
     
     // Inicializar SyncService unificado após outros serviços
     this.syncService = new SyncServiceUnified(
-      this.groqClient?.getKnowledgeService() || new (require('./knowledgeService').KnowledgeService)(),
+      this.aiManager.getKnowledgeService(),
       this.securityManager,
       this.googleIntegrationService
-          );
-    }
+    );
+  }
 
   async initialize() {
     // Verificar se estamos no contexto do Electron
@@ -78,30 +79,41 @@ class CoPilotoDesktop {
 
     await app.whenReady();
     
-    // Inicializar cliente Groq com chave segura
-    const groqKey = await this.securityManager.getGroqKey();
-    if (groqKey) {
-      this.groqClient = new GroqClient(groqKey);
-      // Configurar IA para o serviço de tarefas
-      taskService.setGroqClient(this.groqClient);
+    // Configurar provedores de IA com chaves seguras
+    await this.configureAIProviders();
+    
+    // Inicializar AIToolsService se tiver pelo menos um provedor configurado
+    const activeProviders = this.aiManager.getAvailableProviders().filter(p => p.configured);
+    if (activeProviders.length > 0) {
+      // Obter a primeira chave disponível para compatibilidade com AIToolsService
+      const groqKey = await this.securityManager.getGroqKey();
+      const openaiKey = await this.securityManager.getOpenAIKey();
+      const googleKey = await this.securityManager.getGoogleKey();
       
-      // Inicializar AIToolsService com todos os módulos
-      this.aiToolsService = new AIToolsService(
-        groqKey,
-        this.emailService,
-        this.groqClient.getKnowledgeService(),
-        taskService,
-        feedService,
-        this.processMonitor,
-        this.deployService
-      );
+      const firstAvailableKey = groqKey || openaiKey || googleKey;
       
-      // Conectar o AIToolsService ao GroqClient
-      this.groqClient.setAIToolsService(this.aiToolsService);
+      if (firstAvailableKey) {
+        this.aiToolsService = new AIToolsService(
+          firstAvailableKey,
+          this.emailService,
+          this.aiManager.getKnowledgeService(),
+          taskService,
+          feedService,
+          this.processMonitor,
+          this.deployService
+        );
+        
+        // CRÍTICO: Configurar AIManager e SecurityManager IMEDIATAMENTE após criação
+        this.aiToolsService.setAIManager(this.aiManager);
+        this.aiToolsService.setSecurityManager(this.securityManager);
+        
+        // Conectar o AIToolsService ao AIManager
+        this.aiManager.setAIToolsService(this.aiToolsService);
 
-      // Configurar ChatAPIServer
-      this.chatAPIServer.setGroqApiKey(groqKey);
-      this.chatAPIServer.setAIToolsService(this.aiToolsService);
+        // Configurar ChatAPIServer
+        this.chatAPIServer.setAIManager(this.aiManager);
+        this.chatAPIServer.setAIToolsService(this.aiToolsService);
+      }
     }
 
     // Carregar configuração de email se existir
@@ -135,6 +147,37 @@ class CoPilotoDesktop {
     app.on('before-quit', () => {
       this.cleanup();
     });
+  }
+
+  private async configureAIProviders() {
+    const groqKey = await this.securityManager.getGroqKey();
+    const openaiKey = await this.securityManager.getOpenAIKey();
+    const googleKey = await this.securityManager.getGoogleKey();
+    
+    // Configurar os provedores com suas respectivas chaves
+    if (groqKey) {
+      this.aiManager.configureProvider({ provider: 'groq', apiKey: groqKey });
+    }
+    if (openaiKey) {
+      this.aiManager.configureProvider({ provider: 'openai', apiKey: openaiKey });
+    }
+    if (googleKey) {
+      this.aiManager.configureProvider({ provider: 'google', apiKey: googleKey });
+    }
+    
+    // Carregar configuração do provedor ativo
+    const aiConfig = this.securityManager.getAIProviderConfig();
+    const availableProviders = this.aiManager.getAvailableProviders().filter(p => p.configured);
+    
+    if (availableProviders.length > 0) {
+      // Se o provedor configurado estiver disponível, usá-lo; senão, usar o primeiro disponível
+      const targetProvider = availableProviders.find(p => p.id === aiConfig.provider) || availableProviders[0];
+      this.aiManager.setActiveProvider(targetProvider.id as 'groq' | 'openai' | 'google');
+      
+      if (aiConfig.model && targetProvider.id === aiConfig.provider) {
+        this.aiManager.setProviderModel(targetProvider.id, aiConfig.model);
+      }
+    }
   }
 
   private async createTray() {
@@ -334,12 +377,8 @@ class CoPilotoDesktop {
   private setupIPC() {
     // Comando de texto/voz
     ipcMain.handle('process-command', async (event, command: string) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const response = await this.groqClient.processCommand(command);
+        const response = await this.aiManager.processCommand(command);
         return { success: true, response };
       } catch (error) {
         return { error: error.message };
@@ -348,12 +387,8 @@ class CoPilotoDesktop {
 
     // Comando com contexto de chat
     ipcMain.handle('process-command-with-context', async (event, command: string, chatContext: Array<{ role: string; content: string }>) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const response = await this.groqClient.processCommandWithContext(command, chatContext);
+        const response = await this.aiManager.processCommandWithContext(command, chatContext);
         return { success: true, response };
       } catch (error) {
         return { error: error.message };
@@ -362,12 +397,8 @@ class CoPilotoDesktop {
 
     // Comando com contexto de chat (streaming)
     ipcMain.handle('process-command-with-context-stream', async (event, command: string, chatContext: Array<{ role: string; content: string }>) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const stream = await this.groqClient.processCommandWithContextStream(command, chatContext);
+        const stream = await this.aiManager.processCommandWithContextStream(command, chatContext);
         
         // Converter stream para array de chunks
         const chunks: string[] = [];
@@ -386,11 +417,7 @@ class CoPilotoDesktop {
     ipcMain.handle('get-email-summary', async () => {
       try {
         const emails = await this.emailService.getRecentEmails();
-        if (!this.groqClient) {
-          return { error: 'Chave Groq não configurada' };
-        }
-        
-        const summary = await this.groqClient.summarizeEmails(emails);
+        const summary = await this.aiManager.summarizeEmails(emails);
         return { success: true, summary };
       } catch (error) {
         return { error: error.message };
@@ -408,11 +435,7 @@ class CoPilotoDesktop {
         // Placeholder: capturar código do clipboard ou arquivo ativo
         const codeSnippet = "// Código de exemplo...";
         
-        if (!this.groqClient) {
-          return { error: 'Chave Groq não configurada' };
-        }
-
-        const analysis = await this.groqClient.analyzeCode(codeSnippet);
+        const analysis = await this.aiManager.analyzeCode(codeSnippet);
         return { success: true, analysis };
       } catch (error) {
         return { error: error.message };
@@ -473,25 +496,114 @@ class CoPilotoDesktop {
     ipcMain.handle('set-groq-key', async (event, apiKey: string) => {
       try {
         await this.securityManager.setGroqKey(apiKey);
-        this.groqClient = new GroqClient(apiKey);
+        await this.aiManager.configureProvider({ provider: 'groq', apiKey });
+        
         // Configurar IA para o serviço de tarefas
-        taskService.setGroqClient(this.groqClient);
+        taskService.setAIManager(this.aiManager);
         
-        // Inicializar AIToolsService com todos os módulos
-        this.aiToolsService = new AIToolsService(
-          apiKey,
-          this.emailService,
-          this.groqClient.getKnowledgeService(),
-          taskService,
-          feedService,
-          this.processMonitor,
-          this.deployService
-        );
-        
-        // Conectar o AIToolsService ao GroqClient
-        this.groqClient.setAIToolsService(this.aiToolsService);
+        // Inicializar AIToolsService com todos os módulos se ainda não existir
+        if (!this.aiToolsService) {
+          this.aiToolsService = new AIToolsService(
+            apiKey,
+            this.emailService,
+            this.aiManager.getKnowledgeService(),
+            taskService,
+            feedService,
+            this.processMonitor,
+            this.deployService
+          );
+          
+          // Conectar o AIToolsService ao AIManager
+          this.aiManager.setAIToolsService(this.aiToolsService);
+          
+          // Configurar SecurityManager no AIToolsService
+          this.aiToolsService.setSecurityManager(this.securityManager);
+          this.aiToolsService.setAIManager(this.aiManager);
+        }
         
         return { success: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Configurar chave OpenAI
+    ipcMain.handle('set-openai-key', async (event, apiKey: string) => {
+      try {
+        await this.securityManager.setOpenAIKey(apiKey);
+        await this.aiManager.configureProvider({ provider: 'openai', apiKey });
+        
+        // Configurar IA para o serviço de tarefas
+        taskService.setAIManager(this.aiManager);
+        
+        // Atualizar SecurityManager no AIToolsService se existir
+        if (this.aiToolsService) {
+          this.aiToolsService.setSecurityManager(this.securityManager);
+          this.aiToolsService.setAIManager(this.aiManager);
+        }
+        
+        return { success: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Configurar chave Google
+    ipcMain.handle('set-google-key', async (event, apiKey: string) => {
+      try {
+        await this.securityManager.setGoogleKey(apiKey);
+        await this.aiManager.configureProvider({ provider: 'google', apiKey });
+        
+        // Configurar IA para o serviço de tarefas
+        taskService.setAIManager(this.aiManager);
+        
+        // Atualizar SecurityManager no AIToolsService se existir
+        if (this.aiToolsService) {
+          this.aiToolsService.setSecurityManager(this.securityManager);
+          this.aiToolsService.setAIManager(this.aiManager);
+        }
+        
+        return { success: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Configurar provedor e modelo de IA
+    ipcMain.handle('set-ai-config', async (event, provider: 'groq' | 'openai' | 'google', model?: string) => {
+      try {
+        // Definir provedor ativo
+        this.aiManager.setActiveProvider(provider);
+        
+        // Definir modelo se fornecido
+        if (model) {
+          this.aiManager.setProviderModel(provider, model);
+        }
+        
+        // Salvar configuração
+        this.securityManager.setAIProviderConfig({ provider, model: model || '' });
+        
+        return { success: true };
+      } catch (error) {
+        return { error: error.message };
+      }
+    });
+
+    // Obter configuração de IA atual
+    ipcMain.handle('get-ai-config', async () => {
+      try {
+        const config = this.securityManager.getAIProviderConfig();
+        const providers = this.aiManager.getAvailableProviders();
+        
+        return {
+          success: true,
+          provider: this.aiManager.getActiveProvider(),
+          model: config.model,
+          providers,
+          hasGroqKey: await this.securityManager.hasGroqKey(),
+          hasOpenAIKey: await this.securityManager.hasOpenAIKey(),
+          hasGoogleKey: await this.securityManager.hasGoogleKey()
+        };
       } catch (error) {
         return { error: error.message };
       }
@@ -520,7 +632,9 @@ class CoPilotoDesktop {
     ipcMain.handle('clear-data', async () => {
       try {
         await this.securityManager.clearAllData();
-        this.groqClient = null;
+        // Reinicializar o AIManager para remover configurações
+        this.aiManager = new AIManager();
+        this.aiToolsService = null;
         return { success: true };
       } catch (error) {
         return { error: error.message };
@@ -801,12 +915,8 @@ class CoPilotoDesktop {
 
     // Adicionar item ao repositório de conhecimento
     ipcMain.handle('add-knowledge-item', async (event, item: { title: string; content: string; type: string; tags: string[]; url?: string }) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const result = await this.groqClient.addKnowledge(
+        const result = await this.aiManager.addKnowledge(
           item.title,
           item.content,
           item.type as any,
@@ -821,12 +931,8 @@ class CoPilotoDesktop {
 
     // Buscar no repositório de conhecimento
     ipcMain.handle('search-knowledge', async (event, query: string, type?: string, limit?: number) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const results = await this.groqClient.searchKnowledge(query, type as any, limit);
+        const results = await this.aiManager.searchKnowledge(query, type as any, limit);
         return { success: true, results };
       } catch (error) {
         return { error: error.message };
@@ -835,12 +941,8 @@ class CoPilotoDesktop {
 
     // Obter todos os itens de conhecimento
     ipcMain.handle('get-all-knowledge', async (event, type?: string, limit?: number) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const knowledgeService = this.groqClient.getKnowledgeService();
+        const knowledgeService = this.aiManager.getKnowledgeService();
         const items = await knowledgeService.getAllKnowledge(type as any, limit);
         return { success: true, items };
       } catch (error) {
@@ -850,12 +952,8 @@ class CoPilotoDesktop {
 
     // Obter item específico de conhecimento
     ipcMain.handle('get-knowledge-item', async (event, id: string) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const knowledgeService = this.groqClient.getKnowledgeService();
+        const knowledgeService = this.aiManager.getKnowledgeService();
         const item = await knowledgeService.getKnowledgeItem(id);
         return { success: true, item };
       } catch (error) {
@@ -865,12 +963,8 @@ class CoPilotoDesktop {
 
     // Atualizar item de conhecimento
     ipcMain.handle('update-knowledge-item', async (event, id: string, updates: any) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const knowledgeService = this.groqClient.getKnowledgeService();
+        const knowledgeService = this.aiManager.getKnowledgeService();
         const item = await knowledgeService.updateKnowledgeItem(id, updates);
         return { success: true, item };
       } catch (error) {
@@ -880,12 +974,8 @@ class CoPilotoDesktop {
 
     // Remover item de conhecimento
     ipcMain.handle('delete-knowledge-item', async (event, id: string) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const knowledgeService = this.groqClient.getKnowledgeService();
+        const knowledgeService = this.aiManager.getKnowledgeService();
         const success = await knowledgeService.deleteKnowledgeItem(id);
         return { success };
       } catch (error) {
@@ -895,12 +985,8 @@ class CoPilotoDesktop {
 
     // Obter estatísticas do repositório
     ipcMain.handle('get-knowledge-stats', async () => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const knowledgeService = this.groqClient.getKnowledgeService();
+        const knowledgeService = this.aiManager.getKnowledgeService();
         const stats = await knowledgeService.getStats();
         return { success: true, stats };
       } catch (error) {
@@ -910,12 +996,8 @@ class CoPilotoDesktop {
 
     // Obter todas as tags
     ipcMain.handle('get-all-knowledge-tags', async () => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const knowledgeService = this.groqClient.getKnowledgeService();
+        const knowledgeService = this.aiManager.getKnowledgeService();
         const tags = await knowledgeService.getAllTags();
         return { success: true, tags };
       } catch (error) {
@@ -925,12 +1007,8 @@ class CoPilotoDesktop {
 
     // Salvar resumo de post com IA
     ipcMain.handle('save-post-summary', async (event, title: string, content: string, url?: string, tags: string[] = []) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const result = await this.groqClient.savePostSummaryWithAI(title, content, url, tags);
+        const result = await this.aiManager.savePostSummaryWithAI(title, content, url, tags);
         return { success: true, item: result };
       } catch (error) {
         return { error: error.message };
@@ -939,12 +1017,8 @@ class CoPilotoDesktop {
 
     // Exportar base de conhecimento
     ipcMain.handle('export-knowledge', async () => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const knowledgeService = this.groqClient.getKnowledgeService();
+        const knowledgeService = this.aiManager.getKnowledgeService();
         const items = await knowledgeService.exportKnowledge();
         return { success: true, items };
       } catch (error) {
@@ -954,12 +1028,8 @@ class CoPilotoDesktop {
 
     // Importar base de conhecimento
     ipcMain.handle('import-knowledge', async (event, items: any[]) => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const knowledgeService = this.groqClient.getKnowledgeService();
+        const knowledgeService = this.aiManager.getKnowledgeService();
         await knowledgeService.importKnowledge(items);
         return { success: true };
       } catch (error) {
@@ -969,12 +1039,8 @@ class CoPilotoDesktop {
 
     // Limpar base de conhecimento
     ipcMain.handle('clear-knowledge', async () => {
-      if (!this.groqClient) {
-        return { error: 'Chave Groq não configurada' };
-      }
-
       try {
-        const knowledgeService = this.groqClient.getKnowledgeService();
+        const knowledgeService = this.aiManager.getKnowledgeService();
         await knowledgeService.clearKnowledge();
         return { success: true };
       } catch (error) {
