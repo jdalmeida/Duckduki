@@ -10,14 +10,7 @@ interface SyncProvider {
   folder?: string;
 }
 
-interface SyncData {
-  settings: any;
-  knowledgeBase: any[];
-  conversationHistory: any[];
-  version: string;
-  timestamp: Date;
-  deviceId: string;
-}
+
 
 const SyncSettings: React.FC = () => {
   const [providers, setProviders] = useState<SyncProvider[]>([

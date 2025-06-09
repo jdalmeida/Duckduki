@@ -30,7 +30,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   hasGroqKey, 
   onEmailConfigSet, 
   hasEmailConfig,
-  onAIConfigSet,
   onAIProviderChange,
   aiConfig
 }) => {

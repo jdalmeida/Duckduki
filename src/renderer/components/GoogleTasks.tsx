@@ -27,7 +27,7 @@ const GoogleTasks: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [showCompleted, setShowCompleted] = useState(false);
+  const [showCompleted] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed' | 'today'>('pending');
 
   // Formulário de nova tarefa

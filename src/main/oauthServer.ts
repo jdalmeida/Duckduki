@@ -17,7 +17,7 @@ export class OAuthServer {
     timeout: NodeJS.Timeout;
   }> = new Map();
 
-  constructor(port: number = 3000) {
+  constructor(port: number = 3004) {
     this.port = port;
     this.app = express();
     this.setupRoutes();
@@ -88,7 +88,7 @@ export class OAuthServer {
               } catch (e) {
                 console.log('Não foi possível fechar automaticamente');
               }
-            }, 3000);
+            }, 3004);
           </script>
         </body>
         </html>

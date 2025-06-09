@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { app, shell } from 'electron';
 import * as crypto from 'crypto';
+import { getConfigValue } from '../embeddedConfig';
 
 export interface GoogleServicesConfig {
   clientId: string;
@@ -665,9 +666,9 @@ export class GoogleServicesProvider {
 // Função factory para criar o provedor
 export function createGoogleServicesProvider(): GoogleServicesProvider {
   const config: GoogleServicesConfig = {
-    clientId: process.env.GOOGLE_DRIVE_CLIENT_ID || 'your-client-id',
-    clientSecret: process.env.GOOGLE_DRIVE_CLIENT_SECRET || 'your-client-secret',
-    redirectUri: 'http://localhost:3000/auth/google/callback',
+            clientId: getConfigValue('GOOGLE_DRIVE_CLIENT_ID', 'your-client-id') || 'your-client-id',
+        clientSecret: getConfigValue('GOOGLE_DRIVE_CLIENT_SECRET', 'your-client-secret') || 'your-client-secret',
+    redirectUri: 'http://localhost:3004/auth/google/callback',
     scopes: [
       // Drive
       'https://www.googleapis.com/auth/drive.file',

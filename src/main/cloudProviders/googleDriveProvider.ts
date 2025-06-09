@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { app, shell } from 'electron';
 import * as crypto from 'crypto';
+import { getConfigValue } from '../embeddedConfig';
 
 export interface GoogleDriveConfig {
   clientId: string;
@@ -507,9 +508,9 @@ export class GoogleDriveProvider {
 export function createGoogleDriveProvider(): GoogleDriveProvider {
   const config: GoogleDriveConfig = {
     // Você deve registrar seu aplicativo em https://console.cloud.google.com/
-    clientId: process.env.GOOGLE_DRIVE_CLIENT_ID || 'your-client-id',
-    clientSecret: process.env.GOOGLE_DRIVE_CLIENT_SECRET || 'your-client-secret',
-    redirectUri: 'http://localhost:3000/auth/google/callback',
+            clientId: getConfigValue('GOOGLE_DRIVE_CLIENT_ID', 'your-client-id') || 'your-client-id',
+        clientSecret: getConfigValue('GOOGLE_DRIVE_CLIENT_SECRET', 'your-client-secret') || 'your-client-secret',
+    redirectUri: 'http://localhost:3004/auth/google/callback',
     scopes: [
       'https://www.googleapis.com/auth/drive.file',
       'https://www.googleapis.com/auth/userinfo.profile'
@@ -527,7 +528,7 @@ PARA IMPLEMENTAR EM PRODUÇÃO:
    - Crie um novo projeto ou selecione um existente
    - Ative a API do Google Drive
    - Vá para "Credenciais" > "Criar credenciais" > "ID do cliente OAuth 2.0"
-   - Configure o redirect URI como http://localhost:3000/auth/google/callback
+   - Configure o redirect URI como http://localhost:3004/auth/google/callback
    - Anote o Client ID e Client Secret
 
 2. Configure as variáveis de ambiente:

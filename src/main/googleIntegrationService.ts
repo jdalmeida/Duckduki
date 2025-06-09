@@ -23,7 +23,7 @@ export class GoogleIntegrationService {
   constructor() {
     this.store = new Store({ name: 'google-integration' });
     this.googleProvider = createGoogleServicesProvider();
-    this.oauthServer = new OAuthServer(3000);
+    this.oauthServer = new OAuthServer(3004);
     
     // Inicializar servidor OAuth
     this.startOAuthServer();

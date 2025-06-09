@@ -1,6 +1,6 @@
 {
   "name": "duckduki",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Assistente desktop inteligente com IA generativa via Groq",
   "main": "dist/main/index.js",
   "homepage": "./",
@@ -19,6 +19,8 @@
     "dist:win": "npm run build && electron-builder --win",
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:linux": "npm run build && electron-builder --linux",
+    "prepare-dist": "node prepare-dist.js",
+    "dist-with-credentials": "node prepare-dist.js",
     "postinstall": "node setup.js"
   },
   "keywords": [
@@ -54,6 +56,7 @@
     "ai": "^4.3.16",
     "axios": "^1.6.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
     "electron-store": "^8.1.0",
     "express": "^4.21.2",
     "keytar": "^7.9.0",

@@ -27,7 +27,6 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
   onOpenKnowledge,
   onOpenSettings,
   onToggleFullscreen,
-  onSendCommand,
   hasGroqKey
 }) => {
   const [query, setQuery] = useState('');

@@ -2,6 +2,9 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Importar sistema de configuração embarcada
+import { debugConfigStatus } from './embeddedConfig';
+
 // Verificar se estamos em um ambiente Electron
 if (typeof require === 'undefined') {
   console.error('❌ Este arquivo deve ser executado no contexto do Node.js/Electron');
@@ -78,6 +81,9 @@ class CoPilotoDesktop {
     }
 
     await app.whenReady();
+    
+    // Debug: mostrar status das configurações
+    debugConfigStatus();
     
     // Configurar provedores de IA com chaves seguras
     await this.configureAIProviders();
