@@ -6,33 +6,6 @@ import { FullscreenMode } from './components/FullscreenMode';
 import './App.css';
 import './themes.css';
 
-interface SystemStatus {
-  cpu: number;
-  memory: number;
-  activeApp: {
-    name: string;
-    title: string;
-    pid: number;
-  } | null;
-}
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-}
-
-interface Suggestion {
-  id: string;
-  type: 'command' | 'email' | 'code' | 'contextual';
-  title: string;
-  content: string;
-  timestamp: number;
-  actionable?: boolean;
-  isUserMessage?: boolean;
-}
-
 const App: React.FC = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showFeedPanel, setShowFeedPanel] = useState(false);
@@ -47,17 +20,41 @@ const App: React.FC = () => {
     checkEmailConfig();
     checkFullscreenStatus();
     
-    // Detectar quando a janela é mostrada e forçar desativação do fullscreen
-    const handleWindowShow = () => {
-      console.log('🎯 Janela foi mostrada - forçando modo spotlight');
-      forceSpotlightMode();
+    // Polling periódico para sincronizar estado fullscreen (especialmente importante no Windows)
+    const fullscreenSyncInterval = setInterval(() => {
+      checkFullscreenStatus();
+    }, 1000); // Verificar a cada segundo
+    
+    // Detectar quando a janela é mostrada, mas apenas forçar modo spotlight
+    // se não estava em fullscreen antes
+    const handleWindowShow = async () => {
+      try {
+        const status = await window.electronAPI.getFullscreenStatus();
+        if (status.success && !status.isFullScreen) {
+          console.log('🎯 Janela foi mostrada e não está em fullscreen - forçando modo spotlight');
+          forceSpotlightMode();
+        } else {
+          console.log('🖥️ Janela foi mostrada em fullscreen - mantendo estado atual');
+        }
+      } catch (error) {
+        console.error('❌ Erro ao verificar status ao focar janela:', error);
+      }
     };
 
     // Listener para quando a janela fica visível
-    const handleVisibilityChange = () => {
+    const handleVisibilityChange = async () => {
       if (!document.hidden) {
-        console.log('🎯 Janela ficou visível - forçando modo spotlight');
-        forceSpotlightMode();
+        try {
+          const status = await window.electronAPI.getFullscreenStatus();
+          if (status.success && !status.isFullScreen) {
+            console.log('🎯 Janela ficou visível e não está em fullscreen - forçando modo spotlight');
+            forceSpotlightMode();
+          } else {
+            console.log('🖥️ Janela ficou visível em fullscreen - mantendo estado atual');
+          }
+        } catch (error) {
+          console.error('❌ Erro ao verificar status ao tornar visível:', error);
+        }
       }
     };
 
@@ -66,15 +63,24 @@ const App: React.FC = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
     return () => {
+      clearInterval(fullscreenSyncInterval);
       window.electronAPI.removeAllListeners('contextual-suggestion'); // Limpar qualquer listener restante
       window.removeEventListener('focus', handleWindowShow);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
-  // Função para forçar o modo spotlight sempre que a janela for aberta
+  // Função para forçar o modo spotlight apenas quando necessário
   const forceSpotlightMode = async () => {
     try {
+      // Primeiro, verificar se realmente precisa forçar
+      const currentStatus = await window.electronAPI.getFullscreenStatus();
+      if (currentStatus.success && !currentStatus.isFullScreen) {
+        console.log('🎯 Já está em modo janela, não é necessário forçar spotlight');
+        setIsFullscreen(false);
+        return;
+      }
+      
       console.log('🎯 Forçando modo spotlight via nova API');
       // Usar a nova API específica para forçar modo spotlight
       const result = await window.electronAPI.forceSpotlightMode();
@@ -84,21 +90,9 @@ const App: React.FC = () => {
         console.log('✅ Modo spotlight forçado com sucesso');
       } else {
         console.error('❌ Falha ao forçar modo spotlight:', result.error);
-        // Fallback: tentar o método antigo
-        const currentStatus = await window.electronAPI.getFullscreenStatus();
-        if (currentStatus.success && currentStatus.isFullScreen) {
-          const toggleResult = await window.electronAPI.toggleFullscreen();
-          if (toggleResult.success) {
-            setIsFullscreen(false);
-          }
-        } else {
-          setIsFullscreen(false);
-        }
       }
     } catch (error) {
       console.error('❌ Erro ao forçar modo spotlight:', error);
-      // Em caso de erro, garantir que está no modo spotlight
-      setIsFullscreen(false);
     }
   };
 
@@ -124,6 +118,7 @@ const App: React.FC = () => {
     try {
       const result = await window.electronAPI.getFullscreenStatus();
       if (result.success) {
+        console.log(`🔍 Status fullscreen verificado: ${result.isFullScreen}`);
         setIsFullscreen(result.isFullScreen);
       }
     } catch (error) {
@@ -133,12 +128,16 @@ const App: React.FC = () => {
 
   const toggleFullscreen = async () => {
     try {
+      console.log(`🔄 Alternando fullscreen - estado atual: ${isFullscreen}`);
       const result = await window.electronAPI.toggleFullscreen();
       if (result.success) {
+        console.log(`✅ Fullscreen alternado com sucesso - novo estado: ${result.isFullScreen}`);
         setIsFullscreen(result.isFullScreen);
+      } else {
+        console.error('❌ Falha ao alternar fullscreen:', result.error);
       }
     } catch (error) {
-      console.error('Erro ao alternar tela inteira:', error);
+      console.error('❌ Erro ao alternar tela inteira:', error);
     }
   };
 
@@ -237,14 +236,7 @@ const App: React.FC = () => {
             onOpenTasks={() => {setShowTaskManager(true); toggleFullscreen()}}
             onOpenKnowledge={() => {setShowKnowledgePanel(true); toggleFullscreen()}}
             onOpenSettings={() => {setShowSettings(true); toggleFullscreen()}}
-            onToggleFullscreen={() => {
-              // Simular o toggle do fullscreen
-              window.electronAPI.toggleFullscreen().then((result) => {
-                if (result.success) {
-                  setIsFullscreen(result.isFullScreen);
-                }
-              });
-            }}
+            onToggleFullscreen={toggleFullscreen}
             onSendCommand={handleSpotlightCommand}
             hasGroqKey={hasGroqKey}
           />

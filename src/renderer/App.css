@@ -32,6 +32,21 @@
   overflow: hidden;
 }
 
+/* Estilo Fullscreen - interface completa */
+.app.fullscreen {
+  background: var(--bg-primary);
+  backdrop-filter: var(--backdrop-blur);
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 16px;
+  position: relative;
+  overflow-y: auto;
+}
+
 /* Dark mode para spotlight */
 [data-theme="dark"] .app:not(.fullscreen) {
   background: rgba(30, 30, 30, 0.85);
@@ -41,6 +56,12 @@
     0 25px 50px -12px rgba(0, 0, 0, 0.6),
     0 0 0 1px rgba(255, 255, 255, 0.05),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Dark mode para fullscreen */
+[data-theme="dark"] .app.fullscreen {
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 /* Ajustar header no modo spotlight */

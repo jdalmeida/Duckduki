@@ -32,7 +32,6 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultItemsRef = useRef<(HTMLDivElement | null)[]>([]);
   

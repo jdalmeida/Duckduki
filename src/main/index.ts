@@ -30,6 +30,7 @@ class CoPilotoDesktop {
   private commandPaletteServer: CommandPaletteServer;
   private chatAPIServer: ChatAPIServer;
   private autoLauncher: AutoLauncher;
+  private isInFullScreen: boolean = false;
 
   constructor() {
     this.emailService = new EmailService();
@@ -178,22 +179,8 @@ class CoPilotoDesktop {
 
   private showMainWindow() {
     if (this.mainWindow) {
-      // Forçar desativação do fullscreen quando a janela existente for mostrada
-      if (this.mainWindow.isFullScreen()) {
-        console.log('🔄 Desativando fullscreen da janela existente');
-        this.mainWindow.setFullScreen(false);
-        this.mainWindow.setSize(600, 400);
-        
-        // Aguardar um pouco e restaurar tamanho/posição do spotlight
-        setTimeout(() => {
-          if (this.mainWindow && !this.mainWindow.isFullScreen()) {
-            this.mainWindow.setSize(600, 400);
-            this.positionWindow();
-            console.log('✅ Janela restaurada para modo spotlight');
-          }
-        }, 100);
-      }
-      
+      // Não forçar desativação do fullscreen se a janela já estava visível
+      // Apenas mostrar e focar a janela existente
       this.mainWindow.show();
       this.mainWindow.focus();
       return;
@@ -273,6 +260,7 @@ class CoPilotoDesktop {
     // Eventos de tela cheia para Windows
     this.mainWindow.on('enter-full-screen', () => {
       console.log('🖥️  Entrou em tela cheia');
+      this.isInFullScreen = true; // Atualizar estado interno
       if (process.platform === 'win32') {
         // No Windows, garantir que funciona corretamente
         this.mainWindow?.setResizable(true);
@@ -281,14 +269,16 @@ class CoPilotoDesktop {
     
     this.mainWindow.on('leave-full-screen', () => {
       console.log('🖥️  Saiu da tela cheia');
+      this.isInFullScreen = false; // Atualizar estado interno
       if (process.platform === 'win32') {
-        // Restaurar tamanho original no Windows
+        // Restaurar tamanho original no Windows apenas se não estiver sendo chamado via atalho
         setTimeout(() => {
-          if (this.mainWindow && !this.mainWindow.isFullScreen()) {
+          if (this.mainWindow && !this.isInFullScreen) {
             this.mainWindow.setSize(600, 400);
             this.positionWindow();
+            console.log('✅ Tamanho restaurado após sair da tela cheia');
           }
-        }, 100);
+        }, 200); // Aumentar delay para melhor sincronização
       }
     });
   }
@@ -978,7 +968,8 @@ class CoPilotoDesktop {
           };
         }
 
-        const isFullScreen = this.mainWindow.isFullScreen() || false;
+        // No Windows, usar estado interno; outras plataformas usar método nativo
+        const isFullScreen = process.platform === 'win32' ? this.isInFullScreen : this.mainWindow.isFullScreen();
         console.log(`🖥️  Alternando tela cheia: ${isFullScreen} -> ${!isFullScreen} (Windows: ${process.platform === 'win32'})`);
         
         // Para Windows, garantir que a janela pode ser redimensionada
@@ -988,10 +979,12 @@ class CoPilotoDesktop {
         
         this.mainWindow.setFullScreen(!isFullScreen);
         
-        // Aguardar um pouco para a mudança de estado
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // No Windows, aguardar mais tempo para o evento ser disparado
+        const waitTime = process.platform === 'win32' ? 300 : 100;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
         
-        const newFullScreenState = this.mainWindow.isFullScreen();
+        // Usar estado interno no Windows, método nativo em outras plataformas
+        const newFullScreenState = process.platform === 'win32' ? this.isInFullScreen : this.mainWindow.isFullScreen();
         console.log(`✅ Novo estado da tela cheia: ${newFullScreenState}`);
         
         return {
@@ -1010,7 +1003,11 @@ class CoPilotoDesktop {
     // Obter status da tela inteira
     ipcMain.handle('get-fullscreen-status', async () => {
       try {
-        const isFullScreen = this.mainWindow?.isFullScreen() || false;
+        // No Windows, usar estado interno; outras plataformas usar método nativo
+        const isFullScreen = process.platform === 'win32' ? 
+          this.isInFullScreen : 
+          (this.mainWindow?.isFullScreen() || false);
+          
         return {
           success: true,
           isFullScreen
@@ -1042,10 +1039,12 @@ class CoPilotoDesktop {
         
         this.mainWindow.setFullScreen(fullscreen);
         
-        // Aguardar um pouco para a mudança de estado
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // No Windows, aguardar mais tempo para o evento ser disparado
+        const waitTime = process.platform === 'win32' ? 300 : 100;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
         
-        const actualFullScreenState = this.mainWindow.isFullScreen();
+        // Usar estado interno no Windows, método nativo em outras plataformas
+        const actualFullScreenState = process.platform === 'win32' ? this.isInFullScreen : this.mainWindow.isFullScreen();
         console.log(`✅ Estado atual da tela cheia: ${actualFullScreenState}`);
         
         return {
@@ -1080,13 +1079,19 @@ class CoPilotoDesktop {
 
         console.log('🎯 Forçando modo spotlight');
         
+        // Verificar se está em fullscreen usando estado interno no Windows
+        const isCurrentlyFullScreen = process.platform === 'win32' ? 
+          this.isInFullScreen : 
+          this.mainWindow.isFullScreen();
+        
         // Se estiver em fullscreen, desativar
-        if (this.mainWindow.isFullScreen()) {
+        if (isCurrentlyFullScreen) {
           console.log('🔄 Desativando fullscreen');
           this.mainWindow.setFullScreen(false);
           
-          // Aguardar mudança de estado
-          await new Promise(resolve => setTimeout(resolve, 150));
+          // Aguardar mudança de estado - mais tempo no Windows
+          const waitTime = process.platform === 'win32' ? 300 : 150;
+          await new Promise(resolve => setTimeout(resolve, waitTime));
         }
         
         // Garantir tamanho e posição corretos

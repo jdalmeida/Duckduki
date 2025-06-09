@@ -53,6 +53,7 @@ export const FullscreenButton: React.FC<FullscreenButtonProps> = ({ className = 
     const handleKeyPress = (event: KeyboardEvent) => {
       if (event.key === 'F11') {
         event.preventDefault();
+        console.log('🎹 F11 pressionado - alternando fullscreen');
         toggleFullscreen();
       }
     };
