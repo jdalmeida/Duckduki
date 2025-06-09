@@ -1,3 +1,7 @@
+// Carregar variáveis de ambiente do arquivo .env
+import dotenv from 'dotenv';
+dotenv.config();
+
 // Verificar se estamos em um ambiente Electron
 if (typeof require === 'undefined') {
   console.error('❌ Este arquivo deve ser executado no contexto do Node.js/Electron');
@@ -17,6 +21,10 @@ import { taskService } from './taskService';
 import { AIToolsService } from './aiToolsService';
 import { ChatAPIServer } from './apiRoutes';
 import { AutoLauncher } from './autoLauncher';
+import { SyncServiceUnified } from './syncService';
+import { GoogleIntegrationService } from './googleIntegrationService';
+import { GoogleCalendarTools } from './aiTools/googleCalendarTools';
+import { LocalTaskTools } from './aiTools/localTaskTools';
 
 class CoPilotoDesktop {
   private mainWindow: BrowserWindow | null = null;
@@ -30,6 +38,10 @@ class CoPilotoDesktop {
   private commandPaletteServer: CommandPaletteServer;
   private chatAPIServer: ChatAPIServer;
   private autoLauncher: AutoLauncher;
+  private syncService: SyncServiceUnified;
+  private googleIntegrationService: GoogleIntegrationService;
+  private googleCalendarTools: GoogleCalendarTools;
+  private localTaskTools: LocalTaskTools;
   private isInFullScreen: boolean = false;
 
   constructor() {
@@ -40,7 +52,21 @@ class CoPilotoDesktop {
     this.commandPaletteServer = new CommandPaletteServer();
     this.chatAPIServer = new ChatAPIServer();
     this.autoLauncher = new AutoLauncher();
-  }
+    
+    // Inicializar Google Integration Service
+    this.googleIntegrationService = new GoogleIntegrationService();
+    
+    // Inicializar AI Tools
+    this.googleCalendarTools = new GoogleCalendarTools(this.googleIntegrationService);
+    this.localTaskTools = new LocalTaskTools(taskService);
+    
+    // Inicializar SyncService unificado após outros serviços
+    this.syncService = new SyncServiceUnified(
+      this.groqClient?.getKnowledgeService() || new (require('./knowledgeService').KnowledgeService)(),
+      this.securityManager,
+      this.googleIntegrationService
+          );
+    }
 
   async initialize() {
     // Verificar se estamos no contexto do Electron
@@ -1153,6 +1179,345 @@ class CoPilotoDesktop {
         return { success: true, ...status };
       } catch (error) {
         return { error: error.message };
+      }
+    });
+
+    // === HANDLERS DE SINCRONIZAÇÃO ===
+
+    // Obter configurações de sincronização
+    ipcMain.handle('get-sync-settings', async () => {
+      try {
+        const settings = this.syncService.getSyncSettings();
+        return { success: true, ...settings };
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro desconhecido' 
+        };
+      }
+    });
+
+    // Salvar configurações de sincronização
+    ipcMain.handle('save-sync-settings', async (event, settings: any) => {
+      try {
+        this.syncService.saveSyncSettings(settings);
+        return { success: true };
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao salvar configurações' 
+        };
+      }
+    });
+
+    // Conectar provedor de sincronização
+    ipcMain.handle('connect-sync-provider', async (event, providerId: 'googledrive') => {
+      try {
+        const result = await this.syncService.connectSyncProvider(providerId);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao conectar provedor' 
+        };
+      }
+    });
+
+    // Desconectar provedor de sincronização
+    ipcMain.handle('disconnect-sync-provider', async (event, providerId: 'googledrive') => {
+      try {
+        await this.syncService.disconnectSyncProvider(providerId);
+        return { success: true };
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao desconectar provedor' 
+        };
+      }
+    });
+
+    // Realizar sincronização
+    ipcMain.handle('perform-sync', async (event, providerId: 'googledrive', conflictResolution: 'local' | 'remote' | 'merge') => {
+      try {
+        const result = await this.syncService.performSync(providerId, conflictResolution);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro na sincronização' 
+        };
+      }
+    });
+
+    // Obter status da sincronização
+    ipcMain.handle('get-sync-status', async () => {
+      try {
+        const status = this.syncService.getSyncStatus();
+        return { success: true, ...status };
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao obter status' 
+        };
+      }
+    });
+
+    // === HANDLERS DE GOOGLE SERVICES ===
+
+    // Conectar aos Google Services
+    ipcMain.handle('connect-google-services', async () => {
+      try {
+        const result = await this.googleIntegrationService.connect();
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao conectar Google Services' 
+        };
+      }
+    });
+
+    // Desconectar dos Google Services
+    ipcMain.handle('disconnect-google-services', async () => {
+      try {
+        await this.googleIntegrationService.disconnect();
+        return { success: true };
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao desconectar Google Services' 
+        };
+      }
+    });
+
+    // Verificar se está conectado aos Google Services
+    ipcMain.handle('is-google-services-connected', async () => {
+      try {
+        const status = this.googleIntegrationService.getConnectionStatus();
+        return status.connected || false;
+      } catch (error) {
+        return false;
+      }
+    });
+
+    // Obter informações do usuário Google
+    ipcMain.handle('get-google-user-info', async () => {
+      try {
+        const userInfo = await this.googleIntegrationService.getUserInfo();
+        return userInfo;
+      } catch (error) {
+        return { 
+          error: error instanceof Error ? error.message : 'Erro ao obter informações do usuário' 
+        };
+      }
+    });
+
+    // Obter status da conexão dos Google Services
+    ipcMain.handle('get-google-services-status', async () => {
+      try {
+        const status = this.googleIntegrationService.getConnectionStatus();
+        return { success: true, ...status };
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao obter status' 
+        };
+      }
+    });
+
+    // === GOOGLE CALENDAR HANDLERS ===
+
+    // Obter calendários
+    ipcMain.handle('get-google-calendars', async () => {
+      try {
+        const result = await this.googleIntegrationService.getCalendars();
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao obter calendários' 
+        };
+      }
+    });
+
+    // Obter eventos
+    ipcMain.handle('get-google-events', async (event, calendarId: string, timeMin?: string, timeMax?: string, maxResults?: number) => {
+      try {
+        const result = await this.googleIntegrationService.getEvents(calendarId, timeMin, timeMax, maxResults);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao obter eventos' 
+        };
+      }
+    });
+
+    // Criar evento
+    ipcMain.handle('create-google-event', async (event, eventData: any, calendarId?: string) => {
+      try {
+        const result = await this.googleIntegrationService.createEvent(eventData, calendarId);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao criar evento' 
+        };
+      }
+    });
+
+    // Atualizar evento
+    ipcMain.handle('update-google-event', async (event, eventId: string, eventData: any, calendarId?: string) => {
+      try {
+        const result = await this.googleIntegrationService.updateEvent(eventId, eventData, calendarId);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao atualizar evento' 
+        };
+      }
+    });
+
+    // Excluir evento
+    ipcMain.handle('delete-google-event', async (event, eventId: string, calendarId?: string) => {
+      try {
+        const result = await this.googleIntegrationService.deleteEvent(eventId, calendarId);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao excluir evento' 
+        };
+      }
+    });
+
+    // === GOOGLE TASKS HANDLERS ===
+
+    // Obter listas de tarefas
+    ipcMain.handle('get-google-task-lists', async () => {
+      try {
+        const result = await this.googleIntegrationService.getTaskLists();
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao obter listas de tarefas' 
+        };
+      }
+    });
+
+    // Obter tarefas
+    ipcMain.handle('get-google-tasks', async (event, taskListId: string, showCompleted?: boolean) => {
+      try {
+        const result = await this.googleIntegrationService.getTasks(taskListId, showCompleted);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao obter tarefas' 
+        };
+      }
+    });
+
+    // Criar tarefa
+    ipcMain.handle('create-google-task', async (event, taskData: any, taskListId: string) => {
+      try {
+        const result = await this.googleIntegrationService.createTask(taskData, taskListId);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao criar tarefa' 
+        };
+      }
+    });
+
+    // Atualizar tarefa
+    ipcMain.handle('update-google-task', async (event, taskId: string, taskData: any, taskListId: string) => {
+      try {
+        const result = await this.googleIntegrationService.updateTask(taskId, taskData, taskListId);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao atualizar tarefa' 
+        };
+      }
+    });
+
+    // Excluir tarefa
+    ipcMain.handle('delete-google-task', async (event, taskId: string, taskListId: string) => {
+      try {
+        const result = await this.googleIntegrationService.deleteTask(taskId, taskListId);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao excluir tarefa' 
+        };
+      }
+    });
+
+    // Concluir tarefa
+    ipcMain.handle('complete-google-task', async (event, taskId: string, taskListId: string) => {
+      try {
+        const result = await this.googleIntegrationService.completeTask(taskId, taskListId);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao concluir tarefa' 
+        };
+      }
+    });
+
+    // === AI TOOLS HANDLERS ===
+
+    // Executar tool do Google Calendar/Tasks
+    ipcMain.handle('execute-google-tool', async (event, toolName: string, parameters: any) => {
+      try {
+        const result = await this.googleCalendarTools.executeTool(toolName, parameters);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao executar ferramenta Google' 
+        };
+      }
+    });
+
+    // Executar tool de tarefas locais
+    ipcMain.handle('execute-local-task-tool', async (event, toolName: string, parameters: any) => {
+      try {
+        const result = await this.localTaskTools.executeTool(toolName, parameters);
+        return result;
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao executar ferramenta de tarefas' 
+        };
+      }
+    });
+
+    // Obter definições das tools disponíveis
+    ipcMain.handle('get-available-tools', async () => {
+      try {
+        const googleTools = this.googleCalendarTools.getToolsDefinitions();
+        const localTaskTools = this.localTaskTools.getToolsDefinitions();
+        
+        return {
+          success: true,
+          tools: {
+            google: googleTools,
+            localTasks: localTaskTools
+          }
+        };
+      } catch (error) {
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Erro ao obter ferramentas' 
+        };
       }
     });
   }

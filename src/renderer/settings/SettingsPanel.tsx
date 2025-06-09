@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './SettingsPanel.css';
 import { StorageTest } from '../components/StorageTest';
 import { StreamTest } from '../components/StreamTest';
+import SyncSettings from '../components/SyncSettings';
+import GoogleCalendar from '../components/GoogleCalendar';
+import GoogleTasks from '../components/GoogleTasks';
+import { GoogleConnectionWidget } from '../components/GoogleConnectionWidget';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -23,6 +27,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
   const [customTls, setCustomTls] = useState(true);
   const [showStorageTest, setShowStorageTest] = useState(false);
   const [showStreamTest, setShowStreamTest] = useState(false);
+  const [showSyncSettings, setShowSyncSettings] = useState(false);
+  const [showGoogleCalendar, setShowGoogleCalendar] = useState(false);
+  const [showGoogleTasks, setShowGoogleTasks] = useState(false);
   
   // Estados para inicialização automática
   const [autoLaunchEnabled, setAutoLaunchEnabled] = useState(false);
@@ -260,6 +267,26 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
         </div>
 
         <div className="setting-section">
+          <h3>Sincronização entre Dispositivos</h3>
+          <p className="setting-description">
+                            Configure a sincronização automática e segura dos seus dados entre diferentes dispositivos usando Google Drive. 
+            Seus dados são criptografados antes de serem enviados para a nuvem.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => setShowSyncSettings(true)}
+              className="save-btn"
+            >
+              ⚙️ Configurar Sincronização
+            </button>
+            <span className="setting-description" style={{ margin: 0, fontSize: '12px', color: '#667eea' }}>
+              🔒 Criptografia AES-256 • 🔄 Multi-dispositivo • ⚡ Resolução automática de conflitos
+            </span>
+          </div>
+        </div>
+
+        <div className="setting-section">
           <h3>Inicialização Automática</h3>
           <p className="setting-description">
             Configure o Duckduki para iniciar automaticamente quando o computador ligar.
@@ -321,6 +348,20 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
         </div>
 
         <div className="setting-section">
+          <h3>🔗 Google Services</h3>
+          <p className="setting-description">
+            Conecte-se uma vez ao Google para acessar Calendar, Tasks e sincronização via Drive.
+            Um único login dá acesso a todos os serviços integrados.
+          </p>
+          
+          <GoogleConnectionWidget
+            onOpenCalendar={() => setShowGoogleCalendar(true)}
+            onOpenTasks={() => setShowGoogleTasks(true)}
+            onOpenSync={() => setShowSyncSettings(true)}
+          />
+        </div>
+
+        <div className="setting-section">
           <h3>Sobre</h3>
           <p className="setting-description">
             Duckduki v2.0.0<br/>
@@ -329,6 +370,27 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
         </div>
       </div>
       
+      {showSyncSettings && (
+        <div className="sync-modal-overlay">
+          <div className="sync-modal">
+            <div className="sync-modal-header">
+              <h3>🔄 Configurações de Sincronização</h3>
+              <button 
+                onClick={() => setShowSyncSettings(false)}
+                className="sync-modal-close"
+                title="Fechar"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="sync-modal-content">
+              <SyncSettings />
+            </div>
+          </div>
+        </div>
+      )}
+
       {showStorageTest && (
         <StorageTest onClose={() => setShowStorageTest(false)} />
       )}
@@ -341,6 +403,34 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onGroqKeySet, ha
               <button onClick={() => setShowStreamTest(false)} className="close-btn">✕</button>
             </div>
             <StreamTest />
+          </div>
+        </div>
+      )}
+
+      {showGoogleCalendar && (
+        <div className="storage-test-overlay">
+          <div className="storage-test-modal" style={{ maxWidth: '1200px', width: '95vw', height: '90vh' }}>
+            <div className="storage-test-header">
+              <h2>📅 Google Calendar</h2>
+              <button onClick={() => setShowGoogleCalendar(false)} className="close-btn">✕</button>
+            </div>
+            <div style={{ height: 'calc(100% - 60px)', overflow: 'auto', padding: '20px' }}>
+              <GoogleCalendar />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showGoogleTasks && (
+        <div className="storage-test-overlay">
+          <div className="storage-test-modal" style={{ maxWidth: '1000px', width: '95vw', height: '90vh' }}>
+            <div className="storage-test-header">
+              <h2>✅ Google Tasks</h2>
+              <button onClick={() => setShowGoogleTasks(false)} className="close-btn">✕</button>
+            </div>
+            <div style={{ height: 'calc(100% - 60px)', overflow: 'auto', padding: '20px' }}>
+              <GoogleTasks />
+            </div>
           </div>
         </div>
       )}

@@ -83,6 +83,45 @@ export interface ElectronAPI {
   disableAutoLaunch: () => Promise<any>;
   toggleAutoLaunch: () => Promise<any>;
   getAutoLaunchStatus: () => Promise<any>;
+  
+  // Sincronização
+  getSyncSettings: () => Promise<any>;
+  saveSyncSettings: (settings: any) => Promise<any>;
+  connectSyncProvider: (providerId: 'googledrive') => Promise<any>;
+  disconnectSyncProvider: (providerId: 'googledrive') => Promise<any>;
+  performSync: (providerId: 'googledrive', conflictResolution: 'local' | 'remote' | 'merge') => Promise<any>;
+  getSyncStatus: () => Promise<any>;
+
+  // Google Services  
+  googleServices: {
+    connect: () => Promise<any>;
+    disconnect: () => Promise<any>;
+    isConnected: () => Promise<boolean>;
+    getUserInfo: () => Promise<{ name: string; email: string; picture?: string }>;
+  };
+  connectGoogleServices: () => Promise<any>;
+  disconnectGoogleServices: () => Promise<any>;
+  getGoogleServicesStatus: () => Promise<any>;
+
+  // Google Calendar
+  getGoogleCalendars: () => Promise<any>;
+  getGoogleEvents: (calendarId: string, timeMin?: string, timeMax?: string, maxResults?: number) => Promise<any>;
+  createGoogleEvent: (eventData: any, calendarId?: string) => Promise<any>;
+  updateGoogleEvent: (eventId: string, eventData: any, calendarId?: string) => Promise<any>;
+  deleteGoogleEvent: (eventId: string, calendarId?: string) => Promise<any>;
+
+  // Google Tasks
+  getGoogleTaskLists: () => Promise<any>;
+  getGoogleTasks: (taskListId: string, showCompleted?: boolean) => Promise<any>;
+  createGoogleTask: (taskData: any, taskListId: string) => Promise<any>;
+  updateGoogleTask: (taskId: string, taskData: any, taskListId: string) => Promise<any>;
+  deleteGoogleTask: (taskId: string, taskListId: string) => Promise<any>;
+  completeGoogleTask: (taskId: string, taskListId: string) => Promise<any>;
+
+  // AI Tools
+  executeGoogleTool: (toolName: string, parameters: any) => Promise<any>;
+  executeLocalTaskTool: (toolName: string, parameters: any) => Promise<any>;
+  getAvailableTools: () => Promise<any>;
 }
 
 const electronAPI: ElectronAPI = {
@@ -272,7 +311,87 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('toggle-auto-launch'),
   
   getAutoLaunchStatus: () =>
-    ipcRenderer.invoke('get-auto-launch-status')
+    ipcRenderer.invoke('get-auto-launch-status'),
+  
+  // Sincronização
+  getSyncSettings: () =>
+    ipcRenderer.invoke('get-sync-settings'),
+  
+  saveSyncSettings: (settings: any) =>
+    ipcRenderer.invoke('save-sync-settings', settings),
+  
+      connectSyncProvider: (providerId: 'googledrive') =>
+      ipcRenderer.invoke('connect-sync-provider', providerId),
+    
+    disconnectSyncProvider: (providerId: 'googledrive') =>
+      ipcRenderer.invoke('disconnect-sync-provider', providerId),
+    
+    performSync: (providerId: 'googledrive', conflictResolution: 'local' | 'remote' | 'merge') =>
+      ipcRenderer.invoke('perform-sync', providerId, conflictResolution),
+  
+  getSyncStatus: () =>
+    ipcRenderer.invoke('get-sync-status'),
+
+  // Google Services  
+  googleServices: {
+    connect: () => ipcRenderer.invoke('connect-google-services'),
+    disconnect: () => ipcRenderer.invoke('disconnect-google-services'),
+    isConnected: () => ipcRenderer.invoke('is-google-services-connected'),
+    getUserInfo: () => ipcRenderer.invoke('get-google-user-info'),
+  },
+  connectGoogleServices: () =>
+    ipcRenderer.invoke('connect-google-services'),
+
+  disconnectGoogleServices: () =>
+    ipcRenderer.invoke('disconnect-google-services'),
+
+  getGoogleServicesStatus: () =>
+    ipcRenderer.invoke('get-google-services-status'),
+
+  // Google Calendar
+  getGoogleCalendars: () =>
+    ipcRenderer.invoke('get-google-calendars'),
+
+  getGoogleEvents: (calendarId: string, timeMin?: string, timeMax?: string, maxResults?: number) =>
+    ipcRenderer.invoke('get-google-events', calendarId, timeMin, timeMax, maxResults),
+
+  createGoogleEvent: (eventData: any, calendarId?: string) =>
+    ipcRenderer.invoke('create-google-event', eventData, calendarId),
+
+  updateGoogleEvent: (eventId: string, eventData: any, calendarId?: string) =>
+    ipcRenderer.invoke('update-google-event', eventId, eventData, calendarId),
+
+  deleteGoogleEvent: (eventId: string, calendarId?: string) =>
+    ipcRenderer.invoke('delete-google-event', eventId, calendarId),
+
+  // Google Tasks
+  getGoogleTaskLists: () =>
+    ipcRenderer.invoke('get-google-task-lists'),
+
+  getGoogleTasks: (taskListId: string, showCompleted?: boolean) =>
+    ipcRenderer.invoke('get-google-tasks', taskListId, showCompleted),
+
+  createGoogleTask: (taskData: any, taskListId: string) =>
+    ipcRenderer.invoke('create-google-task', taskData, taskListId),
+
+  updateGoogleTask: (taskId: string, taskData: any, taskListId: string) =>
+    ipcRenderer.invoke('update-google-task', taskId, taskData, taskListId),
+
+  deleteGoogleTask: (taskId: string, taskListId: string) =>
+    ipcRenderer.invoke('delete-google-task', taskId, taskListId),
+
+  completeGoogleTask: (taskId: string, taskListId: string) =>
+    ipcRenderer.invoke('complete-google-task', taskId, taskListId),
+
+  // AI Tools
+  executeGoogleTool: (toolName: string, parameters: any) => 
+    ipcRenderer.invoke('execute-google-tool', toolName, parameters),
+
+  executeLocalTaskTool: (toolName: string, parameters: any) => 
+    ipcRenderer.invoke('execute-local-task-tool', toolName, parameters),
+
+  getAvailableTools: () => 
+    ipcRenderer.invoke('get-available-tools')
 };
 
 // Expor API para o renderer de forma segura

@@ -240,41 +240,27 @@ export class SecurityManager {
     try {
       console.log(`🔑 Tentando salvar chave Groq (plataforma: ${process.platform})`);
       
-      // Priorizar Windows Credential Manager no Windows
-      if (process.platform === 'win32') {
-        console.log('🪟 Usando Windows Credential Manager...');
-        const windowsSuccess = await this.setWindowsCredential('DuckdukiGroqApiKey', apiKey);
-        
-        if (windowsSuccess) {
-          this.store.set('groq-storage-method', 'windows-credential');
-          console.log('✅ Chave Groq salva no Windows Credential Manager (mais seguro)');
-        } else {
-          // Fallback para armazenamento criptografado
-          this.store.set('groq-api-key-fallback', apiKey);
-          this.store.set('groq-storage-method', 'fallback');
-          console.log('⚠️  Windows Credential Manager falhou, usando fallback criptografado');
-        }
+      // Usar keytar primeiro em todas as plataformas se disponível
+      const keytarWorking = await this.isKeytarWorking();
+      console.log(`🔑 Keytar funcionando: ${keytarWorking}`);
+      
+      if (keytar && keytarWorking) {
+        // Armazenar no keychain/credential manager do sistema via keytar
+        await keytar.setPassword(this.serviceName, 'groq-api-key', apiKey);
+        console.log(`✅ Chave Groq salva no keychain do sistema (${process.platform})`);
+        this.store.set('groq-storage-method', 'keytar');
       } else {
-        // Para outras plataformas, usar keytar ou fallback
-        const keytarWorking = await this.isKeytarWorking();
-        console.log(`🔑 Keytar funcionando: ${keytarWorking}`);
+        // Fallback: armazenar no store criptografado
+        this.store.set('groq-api-key-fallback', apiKey);
+        console.log(`⚠️  Chave Groq salva em fallback criptografado (plataforma: ${process.platform})`);
+        this.store.set('groq-storage-method', 'fallback');
         
-        if (keytar && keytarWorking) {
-          // Armazenar no keychain do sistema
-          await keytar.setPassword(this.serviceName, 'groq-api-key', apiKey);
-          console.log('✅ Chave Groq salva no keychain do sistema (seguro)');
-          this.store.set('groq-storage-method', 'keytar');
-        } else {
-          // Fallback: armazenar no store criptografado
-          this.store.set('groq-api-key-fallback', apiKey);
-          console.log(`⚠️  Chave Groq salva em fallback criptografado (plataforma: ${process.platform})`);
-          this.store.set('groq-storage-method', 'fallback');
-          
-          if (process.platform === 'linux') {
-            console.log('💡 Para maior segurança no Linux, instale libsecret:');
-            console.log('   sudo apt install libsecret-1-dev (Ubuntu/Debian)');
-            console.log('   sudo dnf install libsecret-devel (Fedora/RHEL)');
-          }
+        if (process.platform === 'linux') {
+          console.log('💡 Para maior segurança no Linux, instale libsecret:');
+          console.log('   sudo apt install libsecret-1-dev (Ubuntu/Debian)');
+          console.log('   sudo dnf install libsecret-devel (Fedora/RHEL)');
+        } else if (process.platform === 'win32') {
+          console.log('💡 Keytar não está funcionando no Windows');
         }
       }
       
@@ -292,19 +278,8 @@ export class SecurityManager {
       const storageMethod = this.store.get('groq-storage-method', 'unknown');
       console.log(`🔑 Recuperando chave Groq (método: ${storageMethod}, plataforma: ${process.platform})`);
       
-      // Priorizar Windows Credential Manager no Windows
-      if (storageMethod === 'windows-credential' && process.platform === 'win32') {
-        console.log('🪟 Tentando recuperar do Windows Credential Manager');
-        const windowsKey = await this.getWindowsCredential('DuckdukiGroqApiKey');
-        
-        if (windowsKey && windowsKey !== 'CREDENTIAL_EXISTS_BUT_NEEDS_FALLBACK') {
-          console.log('✅ Chave Groq recuperada do Windows Credential Manager');
-          return windowsKey;
-        } else {
-          console.log('⚠️  Chave não encontrada no Windows Credential Manager, tentando fallback');
-          return this.store.get('groq-api-key-fallback', null);
-        }
-      } else if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
+      // Tentar keytar primeiro se foi o método usado
+      if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
         console.log('🔑 Tentando recuperar do keychain do sistema');
         const apiKey = await keytar.getPassword(this.serviceName, 'groq-api-key');
         if (apiKey) {
@@ -315,7 +290,7 @@ export class SecurityManager {
           return this.store.get('groq-api-key-fallback', null);
         }
       } else {
-        // Fallback: recuperar do store
+        // Fallback: recuperar do store criptografado
         console.log('🔑 Recuperando do fallback criptografado');
         const fallbackKey = this.store.get('groq-api-key-fallback', null);
         if (fallbackKey) {
@@ -353,12 +328,6 @@ export class SecurityManager {
   async removeGroqKey(): Promise<void> {
     try {
       const storageMethod = this.store.get('groq-storage-method', 'unknown');
-      
-      // Remover do Windows Credential Manager se foi usado
-      if (storageMethod === 'windows-credential' && process.platform === 'win32') {
-        console.log('🪟 Removendo do Windows Credential Manager...');
-        await this.removeWindowsCredential('DuckdukiGroqApiKey');
-      }
       
       // Remover do keytar se foi usado
       if (storageMethod === 'keytar' && keytar && await this.isKeytarWorking()) {
