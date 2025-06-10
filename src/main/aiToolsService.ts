@@ -10,6 +10,7 @@ import { feedService } from './feedService';
 import { ProcessMonitor } from './processMonitor';
 import { DeployService } from './deployService';
 import { AIManager } from './aiManager';
+import { GoogleCalendarTools } from './aiTools/googleCalendarTools';
 
 export interface ToolResult {
   success: boolean;
@@ -26,6 +27,7 @@ export class AIToolsService {
   private feedService: typeof feedService;
   private processMonitor: ProcessMonitor;
   private deployService: DeployService;
+  private googleCalendarTools: GoogleCalendarTools | null = null;
 
   constructor(
     groqApiKey: string, // Mantido para compatibilidade
@@ -48,6 +50,10 @@ export class AIToolsService {
 
   setAIManager(aiManager: AIManager) {
     this.aiManager = aiManager;
+  }
+
+  setGoogleCalendarTools(googleCalendarTools: GoogleCalendarTools) {
+    this.googleCalendarTools = googleCalendarTools;
   }
 
   private securityManager: any;
@@ -78,7 +84,7 @@ export class AIToolsService {
       case 'google':
         if (!apiKeys.google) throw new Error('Chave Google não configurada');
         const googleModel = createGoogleGenerativeAI({ apiKey: apiKeys.google });
-        return googleModel('gemini-1.5-flash');
+        return googleModel('gemini-2.5-flash');
         
       default:
         throw new Error(`Provedor não suportado: ${activeProvider}`);
@@ -190,6 +196,50 @@ Para a descrição das tarefas, Descreva a tarefa, não use palavras como "taref
             })
           },
 
+          // === FERRAMENTAS DO GOOGLE CALENDAR ===
+          getGoogleTodayEvents: {
+            description: 'Obtém os eventos do Google Calendar para hoje',
+            parameters: z.object({})
+          },
+          getGoogleUpcomingEvents: {
+            description: 'Obtém eventos futuros do Google Calendar',
+            parameters: z.object({
+              days: z.number().optional().describe('Número de dias para buscar (padrão: 7)')
+            })
+          },
+          createGoogleCalendarEvent: {
+            description: 'Cria um novo evento no Google Calendar',
+            parameters: z.object({
+              title: z.string().describe('Título do evento'),
+              description: z.string().describe('Descrição do evento'),
+              startTime: z.string().describe('Data/hora de início (ISO 8601)'),
+              endTime: z.string().describe('Data/hora de fim (ISO 8601)'),
+              location: z.string().optional().describe('Local do evento (opcional)')
+            })
+          },
+          getGoogleTasks: {
+            description: 'Obtém todas as tarefas do Google Tasks',
+            parameters: z.object({})
+          },
+          createGoogleTask: {
+            description: 'Cria uma nova tarefa no Google Tasks',
+            parameters: z.object({
+              title: z.string().describe('Título da tarefa'),
+              description: z.string().optional().describe('Descrição da tarefa (opcional)'),
+              dueDate: z.string().optional().describe('Data de vencimento (ISO 8601, opcional)')
+            })
+          },
+          completeGoogleTask: {
+            description: 'Marca uma tarefa do Google Tasks como concluída',
+            parameters: z.object({
+              taskTitle: z.string().describe('Título da tarefa para buscar e marcar como concluída')
+            })
+          },
+          getGoogleDayOverview: {
+            description: 'Obtém um resumo completo do dia com eventos do Google Calendar e tarefas do Google Tasks',
+            parameters: z.object({})
+          },
+
           // === FERRAMENTAS DE SISTEMA ===
           getSystemStatus: {
             description: 'Obter status do sistema (CPU, memória, app ativo)',
@@ -272,6 +322,45 @@ Para a descrição das tarefas, Descreva a tarefa, não use palavras como "taref
               
               case 'runBuild':
                 toolResult = await this.executeRunBuild();
+                break;
+              
+              // Google Calendar Tools
+              case 'getGoogleTodayEvents':
+                toolResult = await this.executeGoogleTodayEvents();
+                break;
+              
+              case 'getGoogleUpcomingEvents':
+                toolResult = await this.executeGoogleUpcomingEvents(toolCall.args.days);
+                break;
+              
+              case 'createGoogleCalendarEvent':
+                toolResult = await this.executeCreateGoogleCalendarEvent(
+                  toolCall.args.title,
+                  toolCall.args.description,
+                  toolCall.args.startTime,
+                  toolCall.args.endTime,
+                  toolCall.args.location
+                );
+                break;
+              
+              case 'getGoogleTasks':
+                toolResult = await this.executeGetGoogleTasks();
+                break;
+              
+              case 'createGoogleTask':
+                toolResult = await this.executeCreateGoogleTask(
+                  toolCall.args.title,
+                  toolCall.args.description,
+                  toolCall.args.dueDate
+                );
+                break;
+              
+              case 'completeGoogleTask':
+                toolResult = await this.executeCompleteGoogleTask(toolCall.args.taskTitle);
+                break;
+              
+              case 'getGoogleDayOverview':
+                toolResult = await this.executeGetGoogleDayOverview();
                 break;
               
               default:
@@ -499,6 +588,85 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
             console.log('🔧 [TOOL] Executando runBuild');
             const result = await this.executeRunBuild();
             return result.success ? `🔨 ${result.message}` : `❌ ${result.error}`;
+          }
+        },
+
+        // === FERRAMENTAS DO GOOGLE CALENDAR ===
+        getGoogleTodayEvents: {
+          description: 'Obtém os eventos do Google Calendar para hoje',
+          parameters: z.object({}),
+          execute: async () => {
+            console.log('🔧 [TOOL] Executando getGoogleTodayEvents');
+            const result = await this.executeGoogleTodayEvents();
+            return result.success ? `📅 ${result.message}` : `❌ ${result.error}`;
+          }
+        },
+        getGoogleUpcomingEvents: {
+          description: 'Obtém eventos futuros do Google Calendar',
+          parameters: z.object({
+            days: z.number().optional().describe('Número de dias para buscar (padrão: 7)')
+          }),
+          execute: async ({ days }) => {
+            console.log('🔧 [TOOL] Executando getGoogleUpcomingEvents:', days);
+            const result = await this.executeGoogleUpcomingEvents(days);
+            return result.success ? `📅 ${result.message}` : `❌ ${result.error}`;
+          }
+        },
+        createGoogleCalendarEvent: {
+          description: 'Cria um novo evento no Google Calendar',
+          parameters: z.object({
+            title: z.string().describe('Título do evento'),
+            description: z.string().describe('Descrição do evento'),
+            startTime: z.string().describe('Data/hora de início (ISO 8601)'),
+            endTime: z.string().describe('Data/hora de fim (ISO 8601)'),
+            location: z.string().optional().describe('Local do evento (opcional)')
+          }),
+          execute: async ({ title, description, startTime, endTime, location }) => {
+            console.log('🔧 [TOOL] Executando createGoogleCalendarEvent:', title);
+            const result = await this.executeCreateGoogleCalendarEvent(title, description, startTime, endTime, location);
+            return result.success ? `📅 ${result.message}` : `❌ ${result.error}`;
+          }
+        },
+        getGoogleTasks: {
+          description: 'Obtém todas as tarefas do Google Tasks',
+          parameters: z.object({}),
+          execute: async () => {
+            console.log('🔧 [TOOL] Executando getGoogleTasks');
+            const result = await this.executeGetGoogleTasks();
+            return result.success ? `📋 ${result.message}` : `❌ ${result.error}`;
+          }
+        },
+        createGoogleTask: {
+          description: 'Cria uma nova tarefa no Google Tasks',
+          parameters: z.object({
+            title: z.string().describe('Título da tarefa'),
+            description: z.string().optional().describe('Descrição da tarefa (opcional)'),
+            dueDate: z.string().optional().describe('Data de vencimento (ISO 8601, opcional)')
+          }),
+          execute: async ({ title, description, dueDate }) => {
+            console.log('🔧 [TOOL] Executando createGoogleTask:', title);
+            const result = await this.executeCreateGoogleTask(title, description, dueDate);
+            return result.success ? `📋 ${result.message}` : `❌ ${result.error}`;
+          }
+        },
+        completeGoogleTask: {
+          description: 'Marca uma tarefa do Google Tasks como concluída',
+          parameters: z.object({
+            taskTitle: z.string().describe('Título da tarefa para buscar e marcar como concluída')
+          }),
+          execute: async ({ taskTitle }) => {
+            console.log('🔧 [TOOL] Executando completeGoogleTask:', taskTitle);
+            const result = await this.executeCompleteGoogleTask(taskTitle);
+            return result.success ? `✅ ${result.message}` : `❌ ${result.error}`;
+          }
+        },
+        getGoogleDayOverview: {
+          description: 'Obtém um resumo completo do dia com eventos do Google Calendar e tarefas do Google Tasks',
+          parameters: z.object({}),
+          execute: async () => {
+            console.log('🔧 [TOOL] Executando getGoogleDayOverview');
+            const result = await this.executeGetGoogleDayOverview();
+            return result.success ? `📊 ${result.message}` : `❌ ${result.error}`;
           }
         }
       },
@@ -747,6 +915,175 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
       return {
         success: false,
         error: `Erro ao executar build: ${error.message}`
+      };
+    }
+  }
+
+  // === IMPLEMENTAÇÕES DAS FERRAMENTAS DO GOOGLE CALENDAR ===
+
+  async executeGoogleTodayEvents(): Promise<ToolResult> {
+    try {
+      if (!this.googleCalendarTools) {
+        return {
+          success: false,
+          error: 'Google Calendar Tools não configurado'
+        };
+      }
+
+      const result = await this.googleCalendarTools.getTodayEvents();
+      return {
+        success: result.success,
+        message: result.success ? `📅 ${result.message}` : result.error,
+        data: result.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao obter eventos de hoje: ${error.message}`
+      };
+    }
+  }
+
+  async executeGoogleUpcomingEvents(days?: number): Promise<ToolResult> {
+    try {
+      if (!this.googleCalendarTools) {
+        return {
+          success: false,
+          error: 'Google Calendar Tools não configurado'
+        };
+      }
+
+      const result = await this.googleCalendarTools.getUpcomingEvents(days);
+      return {
+        success: result.success,
+        message: result.success ? `📅 ${result.message}` : result.error,
+        data: result.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao obter eventos futuros: ${error.message}`
+      };
+    }
+  }
+
+  async executeCreateGoogleCalendarEvent(
+    title: string, 
+    description: string, 
+    startTime: string, 
+    endTime: string, 
+    location?: string
+  ): Promise<ToolResult> {
+    try {
+      if (!this.googleCalendarTools) {
+        return {
+          success: false,
+          error: 'Google Calendar Tools não configurado'
+        };
+      }
+
+      const result = await this.googleCalendarTools.createEvent(title, description, startTime, endTime, location);
+      return {
+        success: result.success,
+        message: result.success ? `📅 ${result.message}` : result.error,
+        data: result.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao criar evento: ${error.message}`
+      };
+    }
+  }
+
+  async executeGetGoogleTasks(): Promise<ToolResult> {
+    try {
+      if (!this.googleCalendarTools) {
+        return {
+          success: false,
+          error: 'Google Calendar Tools não configurado'
+        };
+      }
+
+      const result = await this.googleCalendarTools.getTasks();
+      return {
+        success: result.success,
+        message: result.success ? `📋 ${result.message}` : result.error,
+        data: result.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao obter tarefas do Google: ${error.message}`
+      };
+    }
+  }
+
+  async executeCreateGoogleTask(title: string, description?: string, dueDate?: string): Promise<ToolResult> {
+    try {
+      if (!this.googleCalendarTools) {
+        return {
+          success: false,
+          error: 'Google Calendar Tools não configurado'
+        };
+      }
+
+      const result = await this.googleCalendarTools.createTask(title, description, dueDate);
+      return {
+        success: result.success,
+        message: result.success ? `📋 ${result.message}` : result.error,
+        data: result.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao criar tarefa no Google: ${error.message}`
+      };
+    }
+  }
+
+  async executeCompleteGoogleTask(taskTitle: string): Promise<ToolResult> {
+    try {
+      if (!this.googleCalendarTools) {
+        return {
+          success: false,
+          error: 'Google Calendar Tools não configurado'
+        };
+      }
+
+      const result = await this.googleCalendarTools.completeTask(taskTitle);
+      return {
+        success: result.success,
+        message: result.success ? `✅ ${result.message}` : result.error,
+        data: result.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao completar tarefa do Google: ${error.message}`
+      };
+    }
+  }
+
+  async executeGetGoogleDayOverview(): Promise<ToolResult> {
+    try {
+      if (!this.googleCalendarTools) {
+        return {
+          success: false,
+          error: 'Google Calendar Tools não configurado'
+        };
+      }
+
+      const result = await this.googleCalendarTools.getDayOverview();
+      return {
+        success: result.success,
+        message: result.success ? `📊 ${result.message}` : result.error,
+        data: result.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Erro ao obter resumo do dia: ${error.message}`
       };
     }
   }

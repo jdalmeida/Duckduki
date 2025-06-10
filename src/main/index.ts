@@ -113,6 +113,9 @@ class CoPilotoDesktop {
         this.aiToolsService.setAIManager(this.aiManager);
         this.aiToolsService.setSecurityManager(this.securityManager);
         
+        // Conectar Google Calendar Tools ao AIToolsService
+        this.aiToolsService.setGoogleCalendarTools(this.googleCalendarTools);
+        
         // Conectar o AIToolsService ao AIManager
         this.aiManager.setAIToolsService(this.aiToolsService);
 
@@ -546,6 +549,9 @@ class CoPilotoDesktop {
           // Configurar SecurityManager no AIToolsService
           this.aiToolsService.setSecurityManager(this.securityManager);
           this.aiToolsService.setAIManager(this.aiManager);
+          
+          // Conectar Google Calendar Tools ao AIToolsService
+          this.aiToolsService.setGoogleCalendarTools(this.googleCalendarTools);
         }
         
         return { success: true };

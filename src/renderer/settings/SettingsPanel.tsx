@@ -86,7 +86,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const providerModels = {
     groq: ['llama3-8b-8192', 'llama3-70b-8192', 'mixtral-8x7b-32768', 'gemma-7b-it'],
     openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'],
-    google: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.0-pro']
+    google: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-pro']
   };
 
   // Carregar status da inicialização automática
@@ -214,7 +214,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const defaultModels = {
       groq: 'llama3-8b-8192',
       openai: 'gpt-4o-mini',
-      google: 'gemini-1.5-flash'
+      google: 'gemini-2.5-flash'
     };
     setSelectedModel(defaultModels[provider]);
     
