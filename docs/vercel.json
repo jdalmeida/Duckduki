@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "public": true,
+  "github": {
+    "silent": true
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  },
+  "functions": {},
+  "routes": [
+    {
+      "src": "/(.*)"
+    }
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
+} 
