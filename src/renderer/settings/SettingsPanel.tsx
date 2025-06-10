@@ -6,6 +6,30 @@ import SyncSettings from '../components/SyncSettings';
 import GoogleCalendar from '../components/GoogleCalendar';
 import GoogleTasks from '../components/GoogleTasks';
 import { GoogleConnectionWidget } from '../components/GoogleConnectionWidget';
+import { 
+  MdSettings, 
+  MdKey, 
+  MdSmartToy, 
+  MdEmail, 
+  MdLink, 
+  MdVisibility, 
+  MdVisibilityOff, 
+  MdWarning, 
+  MdScience, 
+  MdDelete, 
+  MdSync, 
+  MdSecurity, 
+  MdSpeed, 
+  MdClose,
+  MdSave,
+  MdRefresh,
+  MdWaves,
+  MdBuild,
+  MdCalendarToday,
+  MdCheckBox
+} from 'react-icons/md';
+import { SiOpenai, SiGoogle } from 'react-icons/si';
+import { RiRobot2Line } from 'react-icons/ri';
 
 interface SettingsPanelProps {
   onClose: () => void;
@@ -231,8 +255,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   return (
     <div className="settings-panel">
       <div className="settings-header">
-        <h2>Configurações</h2>
-        <button onClick={onClose} className="close-btn">✕</button>
+        <h2><MdSettings /> Configurações</h2>
+        <button onClick={onClose} className="close-btn"><MdClose /></button>
       </div>
 
       <div className="settings-content">
@@ -257,7 +281,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 onClick={() => setShowKey(!showKey)}
                 className="toggle-visibility"
               >
-                {showKey ? '🙈' : '👁️'}
+{showKey ? <MdVisibilityOff /> : <MdVisibility />}
               </button>
             </div>
             <button type="submit" className="save-btn" disabled={!groqKey.trim()}>
@@ -266,7 +290,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </form>
 
           <div className="help-text">
-            <p>📖 Para obter sua chave:</p>
+            <p><MdKey /> Para obter sua chave:</p>
             <ol>
               <li>Acesse <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">console.groq.com</a></li>
               <li>Faça login ou crie uma conta</li>
@@ -277,7 +301,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
 
         <div className="setting-section">
-          <h3>🤖 Configuração de IA</h3>
+          <h3><MdSmartToy /> Configuração de IA</h3>
           <p className="setting-description">
             Escolha seu provedor de IA preferido e configure as chaves de API. 
             Você pode alternar entre diferentes provedores a qualquer momento.
@@ -295,9 +319,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 >
                   <div className="provider-info">
                     <span className="provider-name">
-                      {provider === 'groq' && '⚡ Groq'}
-                      {provider === 'openai' && '🔥 OpenAI'}
-                      {provider === 'google' && '🌟 Google'}
+                      {provider === 'groq' && <><RiRobot2Line /> Groq</>}
+                      {provider === 'openai' && <><SiOpenai /> OpenAI</>}
+                      {provider === 'google' && <><SiGoogle /> Google</>}
                       {isActiveProvider(provider) && ' (ATIVO)'}
                     </span>
                     {getProviderStatus(provider) && <span className="status-indicator">✅</span>}
@@ -350,9 +374,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   }}
                   className="toggle-visibility"
                 >
-                  {((selectedProvider === 'groq' && showKey) ||
+{((selectedProvider === 'groq' && showKey) ||
                     (selectedProvider === 'openai' && showOpenaiKey) ||
-                    (selectedProvider === 'google' && showGoogleKey)) ? '🙈' : '👁️'}
+                    (selectedProvider === 'google' && showGoogleKey)) ? <MdVisibilityOff /> : <MdVisibility />}
                 </button>
               </div>
 
@@ -389,7 +413,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             <div className="provider-help">
               {selectedProvider === 'groq' && (
                 <>
-                  <p>📖 Para obter sua chave Groq:</p>
+                  <p><MdKey /> Para obter sua chave Groq:</p>
                   <ol>
                     <li>Acesse <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">console.groq.com</a></li>
                     <li>Faça login ou crie uma conta</li>
@@ -401,7 +425,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               
               {selectedProvider === 'openai' && (
                 <>
-                  <p>📖 Para obter sua chave OpenAI:</p>
+                  <p><MdKey /> Para obter sua chave OpenAI:</p>
                   <ol>
                     <li>Acesse <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer">platform.openai.com</a></li>
                     <li>Faça login em sua conta OpenAI</li>
@@ -413,7 +437,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               
               {selectedProvider === 'google' && (
                 <>
-                  <p>📖 Para obter sua chave Google:</p>
+                  <p><MdKey /> Para obter sua chave Google:</p>
                   <ol>
                     <li>Acesse <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer">aistudio.google.com</a></li>
                     <li>Faça login com sua conta Google</li>
@@ -470,7 +494,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 onClick={() => setShowPassword(!showPassword)}
                 className="toggle-visibility"
               >
-                {showPassword ? '🙈' : '👁️'}
+{showPassword ? <MdVisibilityOff /> : <MdVisibility />}
               </button>
             </div>
             
@@ -514,7 +538,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </form>
 
           <div className="help-text">
-            <p>📧 Como configurar:</p>
+            <p><MdEmail /> Como configurar:</p>
             {emailProvider === 'gmail' ? (
               <ol>
                 <li>Ative a verificação em 2 etapas na sua conta Google</li>
@@ -552,10 +576,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               onClick={() => setShowSyncSettings(true)}
               className="save-btn"
             >
-              ⚙️ Configurar Sincronização
+<MdSync /> Configurar Sincronização
             </button>
             <span className="setting-description" style={{ margin: 0, fontSize: '12px', color: '#667eea' }}>
-              🔒 Criptografia AES-256 • 🔄 Multi-dispositivo • ⚡ Resolução automática de conflitos
+<MdSecurity /> Criptografia AES-256 • <MdRefresh /> Multi-dispositivo • <MdSpeed /> Resolução automática de conflitos
             </span>
           </div>
         </div>
@@ -565,7 +589,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
           <p className="setting-description">
             Configure o Duckduki para iniciar automaticamente quando o computador ligar.
             {autoLaunchEnabled && <span className="status-ok"> ✅ Habilitada</span>}
-            {!autoLaunchSupported && <span className="status-warning"> ⚠️ Não suportado neste sistema</span>}
+{!autoLaunchSupported && <span className="status-warning"> <MdWarning /> Não suportado neste sistema</span>}
           </p>
           
           <div className="auto-launch-controls">
@@ -575,13 +599,13 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               disabled={!autoLaunchSupported || autoLaunchLoading}
               style={{ minWidth: '200px' }}
             >
-              {autoLaunchLoading ? '⏳ Processando...' : 
-               autoLaunchEnabled ? '🚫 Desabilitar Inicialização' : '🚀 Habilitar Inicialização'}
+{autoLaunchLoading ? 'Processando...' : 
+               autoLaunchEnabled ? 'Desabilitar Inicialização' : 'Habilitar Inicialização'}
             </button>
           </div>
 
           <div className="help-text">
-            <p>🔧 Como funciona:</p>
+            <p><MdBuild /> Como funciona:</p>
             <ul>
               <li><strong>Windows:</strong> Adiciona entrada no registro do sistema</li>
               <li><strong>macOS:</strong> Configura item de login automático</li>
@@ -601,13 +625,13 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             className="save-btn"
             style={{ marginRight: '12px' }}
           >
-            🧪 Testar Armazenamento
+<MdScience /> Testar Armazenamento
           </button>
           <button 
             onClick={() => setShowStreamTest(true)}
             className="save-btn"
           >
-            🌊 Testar Streaming IA
+<MdWaves /> Testar Streaming IA
           </button>
         </div>
 
@@ -617,12 +641,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             Gerencie seus dados armazenados localmente.
           </p>
           <button className="danger-btn">
-            🗑️ Limpar Todos os Dados
+<MdDelete /> Limpar Todos os Dados
           </button>
         </div>
 
         <div className="setting-section">
-          <h3>🔗 Google Services</h3>
+          <h3><MdLink /> Google Services</h3>
           <p className="setting-description">
             Conecte-se uma vez ao Google para acessar Calendar, Tasks e sincronização via Drive.
             Um único login dá acesso a todos os serviços integrados.
@@ -648,13 +672,13 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <div className="sync-modal-overlay">
           <div className="sync-modal">
             <div className="sync-modal-header">
-              <h3>🔄 Configurações de Sincronização</h3>
+              <h3><MdSync /> Configurações de Sincronização</h3>
               <button 
                 onClick={() => setShowSyncSettings(false)}
                 className="sync-modal-close"
                 title="Fechar"
               >
-                ✕
+<MdClose />
               </button>
             </div>
             
@@ -673,8 +697,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <div className="storage-test-overlay">
           <div className="storage-test-modal">
             <div className="storage-test-header">
-              <h2>🌊 Teste de Streaming IA</h2>
-              <button onClick={() => setShowStreamTest(false)} className="close-btn">✕</button>
+              <h2><MdWaves /> Teste de Streaming IA</h2>
+              <button onClick={() => setShowStreamTest(false)} className="close-btn"><MdClose /></button>
             </div>
             <StreamTest />
           </div>
@@ -685,8 +709,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <div className="storage-test-overlay">
           <div className="storage-test-modal" style={{ maxWidth: '1200px', width: '95vw', height: '90vh' }}>
             <div className="storage-test-header">
-              <h2>📅 Google Calendar</h2>
-              <button onClick={() => setShowGoogleCalendar(false)} className="close-btn">✕</button>
+              <h2><MdCalendarToday /> Google Calendar</h2>
+              <button onClick={() => setShowGoogleCalendar(false)} className="close-btn"><MdClose /></button>
             </div>
             <div style={{ height: 'calc(100% - 60px)', overflow: 'auto', padding: '20px' }}>
               <GoogleCalendar />
@@ -699,8 +723,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         <div className="storage-test-overlay">
           <div className="storage-test-modal" style={{ maxWidth: '1000px', width: '95vw', height: '90vh' }}>
             <div className="storage-test-header">
-              <h2>✅ Google Tasks</h2>
-              <button onClick={() => setShowGoogleTasks(false)} className="close-btn">✕</button>
+              <h2><MdCheckBox /> Google Tasks</h2>
+              <button onClick={() => setShowGoogleTasks(false)} className="close-btn"><MdClose /></button>
             </div>
             <div style={{ height: 'calc(100% - 60px)', overflow: 'auto', padding: '20px' }}>
               <GoogleTasks />

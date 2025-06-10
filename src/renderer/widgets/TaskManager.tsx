@@ -1,5 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import './TaskManager.css';
+import { 
+  MdChecklist, 
+  MdMemory, 
+  MdAnalytics, 
+  MdClose, 
+  MdDelete, 
+  MdWarning, 
+  MdNote, 
+  MdAccessTime, 
+  MdPlayArrow, 
+  MdPause, 
+  MdStop, 
+  MdHourglassEmpty, 
+  MdLightbulb,
+  MdPriorityHigh,
+  MdKeyboardArrowUp,
+  MdKeyboardArrowDown,
+  MdCheckCircle,
+  MdPendingActions,
+  MdCancel,
+  MdSave,
+  MdRefresh,
+  MdFolder,
+  MdSchedule,
+  MdLoop,
+  MdFiberManualRecord
+} from 'react-icons/md';
 
 interface Task {
   id: string;
@@ -365,7 +392,7 @@ ${task.timeTracking.sessions.map((session, index) =>
       <div className="task-manager">
         <div className="task-manager-header">
           <div className="task-manager-title">
-            <span className="title-icon">📋</span>
+            <span className="title-icon"><MdChecklist /></span>
             <h3>Organizador de Tarefas</h3>
             <span className="subtitle">Gerenciado por IA</span>
           </div>
@@ -377,14 +404,14 @@ ${task.timeTracking.sessions.map((session, index) =>
               disabled={loading || tasks.length === 0}
               title="Obter sugestões da IA"
             >
-              🧠
+              <MdMemory />
             </button>
             <button 
               className="stats-btn"
               onClick={loadStats}
               title="Atualizar estatísticas"
             >
-              📊
+              <MdAnalytics />
             </button>
             <button 
               className="refresh-btn"
@@ -399,7 +426,7 @@ ${task.timeTracking.sessions.map((session, index) =>
               onClick={onClose}
               title="Fechar organizador"
             >
-              ✕
+              <MdClose />
             </button>
           </div>
         </div>
@@ -429,12 +456,12 @@ ${task.timeTracking.sessions.map((session, index) =>
         {/* Filtros */}
         <div className="task-filters">
           {[
-            { key: 'all', label: 'Todas', icon: '📋' },
-            { key: 'pending', label: 'Pendentes', icon: '⏳' },
-            { key: 'progress', label: 'Em Progresso', icon: '🔄' },
-            { key: 'completed', label: 'Concluídas', icon: '✅' },
-            { key: 'critica', label: 'Críticas', icon: '🔴' },
-            { key: 'alta', label: 'Alta', icon: '🟠' }
+            { key: 'all', label: 'Todas', icon: <MdChecklist /> },
+                          { key: 'pending', label: 'Pendentes', icon: <MdHourglassEmpty /> },
+              { key: 'progress', label: 'Em Progresso', icon: <MdLoop /> },
+              { key: 'completed', label: 'Concluídas', icon: <MdCheckCircle /> },
+              { key: 'critica', label: 'Críticas', icon: <MdPriorityHigh style={{ color: '#f44336' }} /> },
+              { key: 'alta', label: 'Alta', icon: <MdKeyboardArrowUp style={{ color: '#ff9800' }} /> }
           ].map(filterOption => (
             <button
               key={filterOption.key}
@@ -455,7 +482,7 @@ ${task.timeTracking.sessions.map((session, index) =>
               onClick={clearCompleted}
               title="Limpar tarefas concluídas"
             >
-              🗑️ Limpar
+              <MdDelete /> Limpar
             </button>
           )}
         </div>
@@ -471,7 +498,7 @@ ${task.timeTracking.sessions.map((session, index) =>
 
           {error && (
             <div className="error-state">
-              <span className="error-icon">⚠️</span>
+              <span className="error-icon"><MdWarning /></span>
               <p>{error}</p>
               <button onClick={loadTasks} className="retry-btn">
                 Tentar Novamente
@@ -481,7 +508,7 @@ ${task.timeTracking.sessions.map((session, index) =>
 
           {!loading && !error && tasks.length === 0 && (
             <div className="empty-state">
-              <span className="empty-icon">📝</span>
+              <span className="empty-icon"><MdNote /></span>
               <p>Nenhuma tarefa encontrada</p>
               <p className="empty-hint">
                 Adicione uma tarefa descrevendo-a em linguagem natural!
@@ -537,9 +564,9 @@ ${task.timeTracking.sessions.map((session, index) =>
                   </div>
                   
                   <div className="task-info">
-                    <span className="time-estimate">⏱️ {task.estimatedTime}</span>
-                    <span className="category">📁 {task.category}</span>
-                    <span className="created-time">🕒 {formatTime(task.createdAt)}</span>
+                    <span className="time-estimate"><MdAccessTime /> {task.estimatedTime}</span>
+                    <span className="category"><MdFolder /> {task.category}</span>
+                    <span className="created-time"><MdSchedule /> {formatTime(task.createdAt)}</span>
                   </div>
                   
                   {task.tags.length > 0 && (
@@ -580,7 +607,7 @@ ${task.timeTracking.sessions.map((session, index) =>
                           onClick={() => startTimer(task.id)}
                           title="Iniciar cronômetro"
                         >
-                          ▶️ Iniciar
+                          <MdPlayArrow /> Iniciar
                         </button>
                       ) : (
                         <>
@@ -589,14 +616,14 @@ ${task.timeTracking.sessions.map((session, index) =>
                             onClick={() => pauseTimer(task.id)}
                             title="Pausar cronômetro"
                           >
-                            ⏸️ Pausar
+                            <MdPause /> Pausar
                           </button>
                           <button 
                             className="timer-btn stop-timer"
                             onClick={() => stopTimer(task.id)}
                             title="Parar cronômetro"
                           >
-                            ⏹️ Parar
+                            <MdStop /> Parar
                           </button>
                         </>
                       )}
@@ -609,7 +636,7 @@ ${task.timeTracking.sessions.map((session, index) =>
                         className="action-btn start-btn"
                         onClick={() => updateTaskStatus(task.id, 'em_progresso')}
                       >
-                        ▶️ Iniciar
+                        <MdPlayArrow /> Iniciar
                       </button>
                     )}
                     
@@ -619,13 +646,13 @@ ${task.timeTracking.sessions.map((session, index) =>
                           className="action-btn complete-btn"
                           onClick={() => updateTaskStatus(task.id, 'concluida')}
                         >
-                          ✅ Concluir
+                          <MdCheckCircle /> Concluir
                         </button>
                         <button 
                           className="action-btn pause-btn"
                           onClick={() => updateTaskStatus(task.id, 'pendente')}
                         >
-                          ⏸️ Pausar
+                          <MdPause /> Pausar
                         </button>
                       </>
                     )}
@@ -636,7 +663,7 @@ ${task.timeTracking.sessions.map((session, index) =>
                           className="action-btn reopen-btn"
                           onClick={() => updateTaskStatus(task.id, 'pendente')}
                         >
-                          🔄 Reabrir
+                          <MdRefresh /> Reabrir
                         </button>
                         <button 
                           className={`action-btn insight-btn ${savingInsight === task.id ? 'saving' : ''}`}
@@ -644,7 +671,7 @@ ${task.timeTracking.sessions.map((session, index) =>
                           disabled={savingInsight === task.id}
                           title="Salvar insight no repositório de conhecimento"
                         >
-                          {savingInsight === task.id ? '⏳' : '💡'} Insight
+                          {savingInsight === task.id ? <MdHourglassEmpty /> : <MdLightbulb />} Insight
                         </button>
                       </>
                     )}
@@ -653,13 +680,13 @@ ${task.timeTracking.sessions.map((session, index) =>
                       className="action-btn delete-btn"
                       onClick={() => deleteTask(task.id)}
                     >
-                      🗑️
+                      <MdDelete />
                     </button>
                   </div>
                   
                   {task.aiAnalysis && (
                     <div className="ai-analysis">
-                      <h5>💡 Análise da IA:</h5>
+                      <h5><MdLightbulb /> Análise da IA:</h5>
                       <p><strong>Abordagem:</strong> {task.aiAnalysis.suggestedApproach}</p>
                       {task.aiAnalysis.prerequisites.length > 0 && (
                         <p><strong>Pré-requisitos:</strong> {task.aiAnalysis.prerequisites.join(', ')}</p>
@@ -679,7 +706,7 @@ ${task.timeTracking.sessions.map((session, index) =>
         {showSuggestions && (
           <div className="suggestions-modal">
             <div className="suggestions-content">
-              <h4>🧠 Sugestões da IA</h4>
+              <h4><MdMemory /> Sugestões da IA</h4>
               <div className="suggestions-text">
                 {suggestions.split('\n').map((line, index) => (
                   <p key={index}>{line}</p>

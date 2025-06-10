@@ -283,9 +283,9 @@ const App: React.FC = () => {
   };
 
   return (
-    <ThemeProvider>
-      <div className={`app theme-transition ${isFullscreen ? 'fullscreen' : ''}`}>
-        {isFullscreen ? (
+          <ThemeProvider>
+        <div className={`app theme-transition ${isFullscreen ? 'fullscreen' : ''}`}>
+          {isFullscreen ? (
           <FullscreenMode
             showFeedPanel={showFeedPanel}
             showTaskManager={showTaskManager}

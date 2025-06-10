@@ -1,5 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import './FeedPanel.css';
+import { 
+  MdLightbulb, 
+  MdRefresh, 
+  MdAutorenew, 
+  MdClose, 
+  MdSearch, 
+  MdWarning, 
+  MdSave, 
+  MdHourglassEmpty,
+  MdStar,
+  MdMessage,
+  MdPerson,
+  MdInbox,
+  MdFiberManualRecord
+} from 'react-icons/md';
+import { 
+  FaHackerNews, 
+  FaReddit, 
+  FaGithub, 
+  FaDev 
+} from 'react-icons/fa';
 
 interface FeedItem {
   id: string;
@@ -152,11 +173,11 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
 
   const getSourceIcon = (source: string) => {
     switch (source) {
-      case 'hackernews': return '🧡';
-      case 'reddit': return '🔴';
-      case 'github': return '⚫';
-      case 'dev.to': return '💚';
-      default: return '📰';
+      case 'hackernews': return <FaHackerNews style={{ color: '#ff6600' }} />;
+      case 'reddit': return <FaReddit style={{ color: '#ff4500' }} />;
+      case 'github': return <FaGithub style={{ color: '#333' }} />;
+      case 'dev.to': return <FaDev style={{ color: '#0a0a0a' }} />;
+      default: return <MdFiberManualRecord />;
     }
   };
 
@@ -177,7 +198,7 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
       <div className="feed-panel">
         <div className="feed-panel-header">
           <div className="feed-panel-title">
-            <span className="title-icon">💡</span>
+            <span className="title-icon"><MdLightbulb /></span>
             <h3>Quadro de Ideias</h3>
             <span className="subtitle">Tendências em Tech</span>
           </div>
@@ -188,7 +209,7 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
               onClick={() => setAutoRefresh(!autoRefresh)}
               title={autoRefresh ? 'Auto-refresh ativo' : 'Auto-refresh inativo'}
             >
-              🔄
+              <MdAutorenew />
             </button>
             <button 
               className="refresh-btn"
@@ -196,14 +217,14 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
               disabled={loading}
               title="Atualizar feeds"
             >
-              ↻
+              <MdRefresh />
             </button>
             <button 
               className="close-btn"
               onClick={onClose}
               title="Fechar painel"
             >
-              ✕
+              <MdClose />
             </button>
           </div>
         </div>
@@ -211,11 +232,11 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
         <div className="feed-panel-filters">
           <div className="filter-buttons">
             {[
-              { key: 'all', label: 'Todos', icon: '🌟' },
-              { key: 'hackernews', label: 'HN', icon: '🧡' },
-              { key: 'reddit', label: 'Reddit', icon: '🔴' },
-              { key: 'github', label: 'GitHub', icon: '⚫' },
-              { key: 'devto', label: 'Dev.to', icon: '💚' }
+              { key: 'all', label: 'Todos', icon: <MdStar /> },
+              { key: 'hackernews', label: 'HN', icon: <FaHackerNews style={{ color: '#ff6600' }} /> },
+              { key: 'reddit', label: 'Reddit', icon: <FaReddit style={{ color: '#ff4500' }} /> },
+              { key: 'github', label: 'GitHub', icon: <FaGithub style={{ color: '#333' }} /> },
+              { key: 'devto', label: 'Dev.to', icon: <FaDev style={{ color: '#0a0a0a' }} /> }
             ].map(filter => (
               <button
                 key={filter.key}
@@ -236,7 +257,7 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"><MdSearch /></span>
           </div>
         </div>
 
@@ -250,7 +271,7 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
 
           {error && (
             <div className="error-state">
-              <span className="error-icon">⚠️</span>
+              <span className="error-icon"><MdWarning /></span>
               <p>{error}</p>
               <button onClick={loadFeeds} className="retry-btn">
                 Tentar Novamente
@@ -260,7 +281,7 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
 
           {!loading && !error && filteredFeeds.length === 0 && (
             <div className="empty-state">
-              <span className="empty-icon">📭</span>
+              <span className="empty-icon"><MdInbox /></span>
               <p>Nenhum feed encontrado</p>
               {searchTerm && (
                 <button 
@@ -292,7 +313,7 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
                         disabled={savingPost === feed.id}
                         title="Salvar resumo no repositório de conhecimento"
                       >
-                        {savingPost === feed.id ? '⏳' : '💾'}
+                        {savingPost === feed.id ? <MdHourglassEmpty /> : <MdSave />}
                       </button>
                       <span className="feed-time">{formatTime(feed.timestamp)}</span>
                     </div>
@@ -312,10 +333,10 @@ const FeedPanel: React.FC<FeedPanelProps> = ({ isVisible, onClose }) => {
                   
                   <div className="feed-item-footer">
                     <div className="feed-stats">
-                      <span className="score">⭐ {feed.score}</span>
-                      <span className="comments">💬 {feed.comments}</span>
+                      <span className="score"><MdStar /> {feed.score}</span>
+                      <span className="comments"><MdMessage /> {feed.comments}</span>
                       {feed.author && (
-                        <span className="author">👤 {feed.author}</span>
+                        <span className="author"><MdPerson /> {feed.author}</span>
                       )}
                     </div>
                     

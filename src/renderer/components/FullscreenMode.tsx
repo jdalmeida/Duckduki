@@ -5,17 +5,31 @@ import FeedPanel from '../widgets/FeedPanel';
 import TaskManager from '../widgets/TaskManager';
 import KnowledgePanel from '../widgets/KnowledgePanel';
 import { AIChat } from './AIChat';
+import { 
+  MdLightbulb, 
+  MdAnalytics, 
+  MdChecklist, 
+  MdMemory, 
+  MdSettings 
+} from 'react-icons/md';
 
 interface FullscreenModeProps {
   showFeedPanel: boolean;
   showTaskManager: boolean;
   showKnowledgePanel: boolean;
   hasGroqKey: boolean;
+  darkMode: boolean;
   onSetShowFeedPanel: (show: boolean) => void;
   onSetShowTaskManager: (show: boolean) => void;
   onSetShowKnowledgePanel: (show: boolean) => void;
   onShowSettings: () => void;
   onFullscreenChange: (isFullscreen: boolean) => void;
+  onToggleDarkMode: () => void;
+  onToggleFullscreen: () => void;
+  onOpenFeed: () => void;
+  onOpenTasks: () => void;
+  onOpenKnowledge: () => void;
+  onOpenSettings: () => void;
 }
 
 export const FullscreenMode: React.FC<FullscreenModeProps> = ({
@@ -23,20 +37,60 @@ export const FullscreenMode: React.FC<FullscreenModeProps> = ({
   showTaskManager,
   showKnowledgePanel,
   hasGroqKey,
+  darkMode,
   onSetShowFeedPanel,
   onSetShowTaskManager,
   onSetShowKnowledgePanel,
   onShowSettings,
-  onFullscreenChange
+  onFullscreenChange,
+  onToggleDarkMode,
+  onToggleFullscreen,
+  onOpenFeed,
+  onOpenTasks,
+  onOpenKnowledge,
+  onOpenSettings
 }) => {
+  const handleAIChat = async (message: string) => {
+    try {
+      const result = await window.electronAPI.processCommand(message);
+      if (result.success) {
+        return result.response;
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      throw new Error(`Erro ao processar comando: ${error}`);
+    }
+  };
+
   return (
     <>
       <div className="app-header">
         <div className="header-title">
-          <h1>🦆 Duckduki</h1>
-          <span className={`status-indicator ${hasGroqKey ? 'active' : 'inactive'}`}>
-            {hasGroqKey ? '🟢 Ativo' : '🔴 Configure API'}
-          </span>
+          <img 
+            src="/assets/icon.png" 
+            alt="Duckduki" 
+            className="app-logo"
+            onError={(e) => {
+              // Fallback se a imagem não carregar
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const parent = target.parentElement;
+              if (parent) {
+                const fallback = document.createElement('div');
+                fallback.className = 'app-logo app-logo-fallback';
+                fallback.textContent = '🦆';
+                parent.appendChild(fallback);
+              }
+            }}
+          />
+          <div className="title-content">
+            <h1>Duckduki</h1>
+            <div className={`status-indicator ${hasGroqKey ? 'active' : 'inactive'}`}>
+              <MdLightbulb />
+              IA {hasGroqKey ? 'Ativa' : 'Inativa'}
+            </div>
+          </div>
         </div>
         <div className="header-controls">
           <div className="control-group">
@@ -46,21 +100,21 @@ export const FullscreenMode: React.FC<FullscreenModeProps> = ({
               onClick={() => onSetShowFeedPanel(true)}
               title="Quadro de Ideias - Tendências Tech"
             >
-              💡
+              <MdAnalytics />
             </button>
             <button 
               className="task-manager-btn"
               onClick={() => onSetShowTaskManager(true)}
               title="Organizador de Tarefas com IA"
             >
-              📋
+              <MdChecklist />
             </button>
             <button 
               className="knowledge-panel-btn"
               onClick={() => onSetShowKnowledgePanel(true)}
               title="Repositório de Conhecimento"
             >
-              🧠
+              <MdMemory />
             </button>
           </div>
           
@@ -75,7 +129,7 @@ export const FullscreenMode: React.FC<FullscreenModeProps> = ({
             onClick={onShowSettings}
             title="Configurações"
           >
-            ⚙️
+            <MdSettings />
           </button>
         </div>
       </div>
@@ -94,18 +148,12 @@ export const FullscreenMode: React.FC<FullscreenModeProps> = ({
           </div>
         ) : (
           <div className="setup-required-main">
-            <div className="welcome-icon">🦆</div>
-            <h2>Bem-vindo ao Duckduki!</h2>
-            <p>Seu assistente de produtividade inteligente</p>
-            <div className="setup-required">
-              <p>⚙️ Configure sua chave Groq para começar</p>
-              <button 
-                className="setup-btn"
-                onClick={onShowSettings}
-              >
-                Configurar Agora
-              </button>
-            </div>
+            <div className="welcome-icon"><MdSettings /></div>
+            <h2>Configure sua IA</h2>
+            <p>Para usar o chat e as ferramentas de IA, configure uma chave de API nas configurações.</p>
+            <button className="setup-btn" onClick={onShowSettings}>
+              Abrir Configurações
+            </button>
           </div>
         )}
       </div>

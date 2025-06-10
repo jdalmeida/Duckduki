@@ -1,5 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import './KnowledgePanel.css';
+import { 
+  MdMemory, 
+  MdClose, 
+  MdAdd, 
+  MdSearch, 
+  MdDelete, 
+  MdNote, 
+  MdNewspaper, 
+  MdChat, 
+  MdDescription, 
+  MdCode, 
+  MdLink,
+  MdSave,
+  MdRefresh
+} from 'react-icons/md';
 
 interface KnowledgeItem {
   id: string;
@@ -56,12 +71,12 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
   });
 
   const typeLabels = {
-    note: '📝 Nota',
-    post_summary: '📰 Resumo de Post',
-    conversation: '💬 Conversa',
-    document: '📄 Documento',
-    code: '💻 Código',
-    reference: '🔗 Referência'
+    note: <><MdNote /> Nota</>,
+    post_summary: <><MdNewspaper /> Resumo de Post</>,
+    conversation: <><MdChat /> Conversa</>,
+    document: <><MdDescription /> Documento</>,
+    code: <><MdCode /> Código</>,
+    reference: <><MdLink /> Referência</>
   };
 
   useEffect(() => {
@@ -251,7 +266,7 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
               onClick={onClose}
               title="Fechar repositório"
             >
-              ✕
+<MdClose />
             </button>
           </div>
         </div>
@@ -304,14 +319,14 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
               className="add-button"
               disabled={isLoading}
             >
-              📝 Adicionar Nota
+              <MdAdd /> Adicionar Nota
             </button>
             <button
               onClick={() => setShowPostSummaryModal(true)}
               className="post-button"
               disabled={isLoading}
             >
-              📰 Resumir Post
+              <MdNewspaper /> Resumir Post
             </button>
           </div>
         </div>
@@ -358,17 +373,17 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
             />
             <div className="form-buttons">
               <button onClick={handleAddItem} className="save-button" disabled={isLoading}>
-                💾 Salvar
+<MdSave /> Salvar
               </button>
               <button onClick={() => setShowAddForm(false)} className="cancel-button">
-                ❌ Cancelar
+<MdClose /> Cancelar
               </button>
             </div>
           </div>
         )}
 
         <div className="knowledge-content">
-          {isSearching && <div className="loading">🔍 Buscando...</div>}
+          {isSearching && <div className="loading"><MdSearch /> Buscando...</div>}
           
           {searchQuery && searchResults.length > 0 && (
             <div className="search-results">
@@ -418,7 +433,7 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
                       }}
                       className="delete-button"
                     >
-                      🗑️
+<MdDelete />
                     </button>
                   </div>
                   <h4>{item.title}</h4>
@@ -440,7 +455,7 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
 
           {!searchQuery && knowledgeItems.length === 0 && !isLoading && (
             <div className="empty-state">
-              <h3>📚 Nenhum conhecimento salvo</h3>
+              <h3><MdMemory /> Nenhum conhecimento salvo</h3>
               <p>Comece adicionando notas, salvando resumos de posts interessantes ou deixe a IA salvar suas conversas automaticamente.</p>
             </div>
           )}
@@ -451,8 +466,8 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
           <div className="knowledge-modal" onClick={resetPostSummaryForm}>
             <div className="modal-content post-summary-modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h3>📰 Resumir Post</h3>
-                <button onClick={resetPostSummaryForm}>✕</button>
+                <h3><MdNewspaper /> Resumir Post</h3>
+                                  <button onClick={resetPostSummaryForm}><MdClose /></button>
               </div>
               
               <div className="modal-body">
@@ -555,7 +570,7 @@ const KnowledgePanel: React.FC<KnowledgePanelProps> = ({ isVisible, onClose }) =
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h3>{selectedItem.title}</h3>
-                <button onClick={() => setSelectedItem(null)}>✕</button>
+                <button onClick={() => setSelectedItem(null)}><MdClose /></button>
               </div>
               <div className="modal-meta">
                 <span className="item-type">{typeLabels[selectedItem.type]}</span>
