@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Documentação - Duckduki</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="docs-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <span class="logo">🦆</span>
+                <span class="brand-name">Duckduki</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Voltar ao Site</a></li>
+                <li><a href="#installation" class="nav-link">Instalação</a></li>
+                <li><a href="#usage" class="nav-link">Uso</a></li>
+                <li><a href="#api" class="nav-link">API</a></li>
+                <li><a href="#troubleshooting" class="nav-link">Troubleshooting</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="docs-container">
+        <aside class="docs-sidebar">
+            <div class="sidebar-content">
+                <h3>Documentação</h3>
+                <nav class="docs-nav">
+                    <ul>
+                        <li><a href="#overview">Visão Geral</a></li>
+                        <li><a href="#installation">Instalação</a></li>
+                        <li><a href="#configuration">Configuração</a></li>
+                        <li><a href="#usage">Como Usar</a></li>
+                        <li><a href="#api">API Reference</a></li>
+                        <li><a href="#troubleshooting">Troubleshooting</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </aside>
+
+        <main class="docs-main">
+            <div class="docs-content">
+                <section id="overview" class="docs-section">
+                    <h1>🦆 Duckduki - Documentação</h1>
+                    <p class="lead">Assistente Desktop Inteligente com IA Generativa via Groq</p>
+                    
+                    <h2>O que é o Duckduki?</h2>
+                    <p>O Duckduki é um aplicativo desktop multiplataforma que utiliza IA generativa para aumentar sua produtividade através de assistência inteligente, automações e sugestões contextuais.</p>
+                </section>
+
+                <section id="installation" class="docs-section">
+                    <h1>📦 Instalação</h1>
+                    
+                    <h2>Requisitos</h2>
+                    <ul>
+                        <li>Node.js 18+</li>
+                        <li>npm ou yarn</li>
+                        <li>Git</li>
+                    </ul>
+
+                    <h2>Instalação via NPM</h2>
+                    <div class="code-block">
+                        <pre><code>git clone https://github.com/seu-usuario/duckduki.git
+cd duckduki
+npm run setup
+npm run dev</code></pre>
+                    </div>
+                </section>
+
+                <section id="configuration" class="docs-section">
+                    <h1>⚙️ Configuração</h1>
+                    
+                    <h2>API Groq</h2>
+                    <p>Para usar o Duckduki, você precisa de uma chave API do Groq:</p>
+                    <ol>
+                        <li>Acesse <a href="https://console.groq.com">console.groq.com</a></li>
+                        <li>Crie uma conta e gere uma API key</li>
+                        <li>Configure a chave no aplicativo</li>
+                    </ol>
+                </section>
+
+                <section id="usage" class="docs-section">
+                    <h1>🎯 Como Usar</h1>
+                    
+                    <h2>Comandos Principais</h2>
+                    <ul>
+                        <li><code>resumo dos emails</code> - Gera resumo inteligente dos emails</li>
+                        <li><code>analisar código atual</code> - Analisa código no editor</li>
+                        <li><code>planejar meu dia</code> - Cria plano de trabalho</li>
+                        <li><code>executar build</code> - Roda build do projeto</li>
+                    </ul>
+                </section>
+
+                <section id="api" class="docs-section">
+                    <h1>🔧 API Reference</h1>
+                    
+                    <h2>AI Providers</h2>
+                    <p>O Duckduki suporta múltiplos provedores de IA:</p>
+                    <ul>
+                        <li>Groq (principal)</li>
+                        <li>OpenAI</li>
+                        <li>Google AI</li>
+                    </ul>
+                </section>
+
+                <section id="troubleshooting" class="docs-section">
+                    <h1>🔧 Troubleshooting</h1>
+                    
+                    <h2>Problemas Comuns</h2>
+                    <h3>API Key não funciona</h3>
+                    <p>Verifique se a chave está correta e tem permissões adequadas.</p>
+                    
+                    <h3>Linux - Dependências</h3>
+                    <div class="code-block">
+                        <pre><code># Ubuntu/Debian
+sudo apt install libsecret-1-dev libxss1 libgconf-2-4
+
+# Fedora/RHEL
+sudo dnf install libsecret-devel libXScrnSaver GConf2</code></pre>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 
