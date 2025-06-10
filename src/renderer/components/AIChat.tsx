@@ -70,7 +70,7 @@ export const AIChat: React.FC<AIChatProps> = ({ isVisible, onClose }) => {
         <div className="ai-chat-messages">
           {messages.length === 0 && (
             <div className="ai-chat-welcome">
-              <div className="ai-chat-welcome-icon">🦆</div>
+              <img src="icon.png" alt="Duckduki" className="ai-chat-welcome-icon" />
               <h3>Olá! Sou o Duckduki</h3>
               <p>
                 Posso ajudar você com suas tarefas, buscar notícias de tecnologia, 

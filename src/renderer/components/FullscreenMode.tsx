@@ -68,7 +68,7 @@ export const FullscreenMode: React.FC<FullscreenModeProps> = ({
       <div className="app-header">
         <div className="header-title">
           <img 
-            src="/assets/icon.png" 
+            src="icon.png" 
             alt="Duckduki" 
             className="app-logo"
             onError={(e) => {

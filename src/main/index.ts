@@ -261,22 +261,43 @@ class CoPilotoDesktop {
       return;
     }
 
-    this.mainWindow = new BrowserWindow({
+    // Configurações específicas por plataforma para resolver problema de cantos
+    const windowConfig: Electron.BrowserWindowConstructorOptions = {
       width: 600,
       height: 400,
       show: false,
-      frame: false,
       resizable: true, // Permitir redimensionamento para funcionar em tela cheia no Windows
       alwaysOnTop: true,
       transparent: true, // Fazer janela transparente para efeito spotlight
       backgroundColor: 'rgba(0, 0, 0, 0)', // Fundo completamente transparente
       roundedCorners: true, // Bordas arredondadas (macOS/Linux)
+      hasShadow: false, // Remover sombra da janela no Windows
+      frame: false,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
         preload: join(__dirname, '../preload.js')
       }
-    });
+    };
+
+    // Configurações específicas para Windows para resolver vazamento de cantos
+    if (process.platform === 'win32') {
+      // Usar cor de fundo que corresponda ao tema da aplicação
+      windowConfig.transparent = true;
+      // Configurações específicas para melhor renderização no Windows
+      windowConfig.thickFrame = false;
+      windowConfig.vibrancy = undefined;
+      // Usar uma janela sem borda personalizada
+      windowConfig.titleBarStyle = 'hidden';
+      // Manter cantos arredondados mas controlar vazamento
+      windowConfig.roundedCorners = false;
+      windowConfig.hasShadow = false;
+      // Configurações adicionais para Windows
+      windowConfig.skipTaskbar = false;
+      windowConfig.show = false; // Mostrar só quando estiver pronto
+    }
+
+    this.mainWindow = new BrowserWindow(windowConfig);
 
     // Carregar a interface React
     if (process.env.NODE_ENV === 'development') {

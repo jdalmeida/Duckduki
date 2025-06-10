@@ -1,0 +1,84 @@
+.corner-mask-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.corner-mask {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+/* Canto superior esquerdo */
+.corner-top-left {
+  top: 0;
+  left: 0;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* Canto superior direito */
+.corner-top-right {
+  top: 0;
+  right: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+/* Canto inferior esquerdo */
+.corner-bottom-left {
+  bottom: 0;
+  left: 0;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+/* Canto inferior direito */
+.corner-bottom-right {
+  bottom: 0;
+  right: 0;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* Alternativa: usar border-radius inverso para criar cantos */
+.corner-mask.rounded {
+  border-radius: 0 0 20px 0;
+  background: inherit;
+}
+
+.corner-top-left.rounded {
+  border-radius: 0 0 20px 0;
+}
+
+.corner-top-right.rounded {
+  border-radius: 0 0 0 20px;
+}
+
+.corner-bottom-left.rounded {
+  border-radius: 0 20px 0 0;
+}
+
+.corner-bottom-right.rounded {
+  border-radius: 20px 0 0 0;
+}
+
+/* Máscara para Windows específica */
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+  .corner-mask {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+/* Para temas escuros */
+[data-theme="dark"] .corner-mask {
+  background: #1a1a1b;
+}
+
+/* Para temas claros */
+[data-theme="light"] .corner-mask {
+  background: #ffffff;
+} 

@@ -9,7 +9,14 @@
   gap: var(--space-4);
   color: var(--text-primary);
   font-family: var(--font-system);
+  /* Correção para vazamento de cantos no Windows */
+  -webkit-app-region: no-drag;
+  position: relative;
+  /* Garantir que o conteúdo cubra toda a área da janela */
+  overflow: hidden;
 }
+
+
 
 /* Modo Spotlight */
 .app:not(.fullscreen) {
@@ -19,6 +26,13 @@
   box-shadow: var(--shadow-lg);
   padding: 0;
   overflow: hidden;
+  /* Configuração para manter cantos arredondados */
+  position: relative;
+  /* Garantir bordas arredondadas limpas */
+  -webkit-border-radius: var(--radius-xl);
+  -moz-border-radius: var(--radius-xl);
+  /* Aplicar clipagem para garantir que o conteúdo respeite os cantos */
+  clip-path: inset(0 round var(--radius-xl));
 }
 
 /* Modo Fullscreen */

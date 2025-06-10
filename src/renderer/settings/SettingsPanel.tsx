@@ -21,7 +21,6 @@ import {
   MdSecurity, 
   MdSpeed, 
   MdClose,
-  MdSave,
   MdRefresh,
   MdWaves,
   MdBuild,
@@ -49,9 +48,7 @@ interface SettingsPanelProps {
 }
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({ 
-  onClose, 
-  onGroqKeySet, 
-  hasGroqKey, 
+  onClose,
   onEmailConfigSet, 
   hasEmailConfig,
   onAIProviderChange,
@@ -125,14 +122,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       alert('Erro ao alterar configuração de inicialização automática');
     } finally {
       setAutoLaunchLoading(false);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (groqKey.trim()) {
-      onGroqKeySet(groqKey.trim());
-      setGroqKey('');
     }
   };
 
@@ -260,46 +249,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       </div>
 
       <div className="settings-content">
-        <div className="setting-section">
-          <h3>Chave API Groq</h3>
-          <p className="setting-description">
-            Configure sua chave da API Groq para habilitar o assistente IA.
-            {hasGroqKey && <span className="status-ok"> ✅ Configurada</span>}
-          </p>
-          
-          <form onSubmit={handleSubmit} className="key-form">
-            <div className="input-group">
-              <input
-                type={showKey ? "text" : "password"}
-                value={groqKey}
-                onChange={(e) => setGroqKey(e.target.value)}
-                placeholder="Cole sua chave da API Groq aqui..."
-                className="key-input"
-              />
-              <button
-                type="button"
-                onClick={() => setShowKey(!showKey)}
-                className="toggle-visibility"
-              >
-{showKey ? <MdVisibilityOff /> : <MdVisibility />}
-              </button>
-            </div>
-            <button type="submit" className="save-btn" disabled={!groqKey.trim()}>
-              Salvar Chave
-            </button>
-          </form>
-
-          <div className="help-text">
-            <p><MdKey /> Para obter sua chave:</p>
-            <ol>
-              <li>Acesse <a href="https://console.groq.com" target="_blank" rel="noopener noreferrer">console.groq.com</a></li>
-              <li>Faça login ou crie uma conta</li>
-              <li>Vá para "API Keys" e crie uma nova chave</li>
-              <li>Cole a chave aqui</li>
-            </ol>
-          </div>
-        </div>
-
         <div className="setting-section">
           <h3><MdSmartToy /> Configuração de IA</h3>
           <p className="setting-description">

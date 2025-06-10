@@ -1,24 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useChat } from '@ai-sdk/react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './SpotlightMode.css';
-import { AIResponsePopup } from './AIResponsePopup';
 import { 
   MdLightbulb, 
   MdChecklist, 
   MdMemory, 
   MdSettings, 
   MdFullscreen,
-  MdEmail,
-  MdAdd,
-  MdAnalytics,
-  MdList,
-  MdNewspaper,
-  MdSearch,
-  MdNote,
-  MdFindInPage,
-  MdComputer,
-  MdCode,
-  MdBuild,
-  MdAutoAwesome
+  MdSend,
+  MdChat,
+  MdKeyboard
 } from 'react-icons/md';
 
 interface Command {
@@ -50,17 +43,41 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showChat, setShowChat] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultItemsRef = useRef<(HTMLDivElement | null)[]>([]);
-  
-  // Estados do popup de resposta da IA
-  const [showAIPopup, setShowAIPopup] = useState(false);
-  const [aiResponse, setAiResponse] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiTitle, setAiTitle] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Hook do chat IA
+  const { messages, input, handleInputChange, handleSubmit, status, error } = useChat({
+    api: 'http://localhost:3003/api/chat',
+    onError: (error) => {
+      console.error('❌ [SPOTLIGHT] Chat error:', error);
+    },
+    onFinish: (message, options) => {
+      console.log('✅ [SPOTLIGHT] Chat message finished:', message);
+    },
+    onResponse: (response) => {
+      console.log('📡 [SPOTLIGHT] Response status:', response.status);
+      if (!response.ok) {
+        console.error('❌ [SPOTLIGHT] Response not OK:', response.statusText);
+      }
+    }
+  });
+
+  // Comandos principais (mais simples)
   const commands: Command[] = [
-    // === COMANDOS PRINCIPAIS ===
+    {
+      id: 'chat',
+      title: 'Conversar com IA',
+      description: 'Abrir chat inteligente com ferramentas',
+      icon: <MdChat />,
+      action: () => {
+        setShowChat(true);
+        setQuery('');
+      },
+      keywords: ['chat', 'ia', 'conversar', 'perguntar', 'ai']
+    },
     {
       id: 'feed',
       title: 'Quadro de Ideias',
@@ -100,119 +117,6 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
       icon: <MdFullscreen />,
       action: onToggleFullscreen,
       keywords: ['fullscreen', 'tela cheia', 'expandir', 'maximizar']
-    },
-
-    // === FERRAMENTAS DE IA ===
-    {
-      id: 'ai-email-summary',
-      title: 'Resumo de Emails',
-      description: 'IA analisa e resume emails recentes',
-      icon: <MdEmail />,
-      action: () => executeAICommand('Use a ferramenta getEmailSummary para obter e resumir meus emails recentes', 'Resumo de Emails'),
-      keywords: ['email', 'emails', 'resumo', 'caixa', 'correio', 'mensagens']
-    },
-    {
-      id: 'ai-add-task',
-      title: 'Criar Tarefa com IA',
-      description: 'Criar nova tarefa com sugestões inteligentes',
-      icon: <MdAdd />,
-      action: () => {
-        const taskDesc = prompt('Digite a descrição da tarefa:');
-        if (taskDesc) executeAICommand(`Use a ferramenta addTask para criar uma nova tarefa: ${taskDesc}`, 'Nova Tarefa');
-      },
-      keywords: ['criar', 'adicionar', 'nova', 'tarefa', 'task', 'todo']
-    },
-    {
-      id: 'ai-task-stats',
-      title: 'Estatísticas de Tarefas',
-      description: 'Visualizar estatísticas e progresso das tarefas',
-      icon: <MdAnalytics />,
-      action: () => executeAICommand('Use a ferramenta getTaskStats para mostrar estatísticas das minhas tarefas', 'Estatísticas de Tarefas'),
-      keywords: ['estatisticas', 'stats', 'progresso', 'relatório', 'dashboard']
-    },
-    {
-      id: 'ai-task-suggestions',
-      title: 'Sugestões de Produtividade',
-      description: 'IA sugere otimizações para suas tarefas',
-      icon: <MdAutoAwesome />,
-      action: () => executeAICommand('Use a ferramenta getTaskSuggestions para dar sugestões de otimização das minhas tarefas', 'Sugestões de Produtividade'),
-      keywords: ['sugestões', 'otimizar', 'produtividade', 'melhorar', 'eficiência']
-    },
-    {
-      id: 'ai-list-tasks',
-      title: 'Listar Tarefas',
-      description: 'Ver todas as tarefas pendentes',
-      icon: <MdList />,
-      action: () => executeAICommand('Use a ferramenta getTasks para listar todas as minhas tarefas', 'Lista de Tarefas'),
-      keywords: ['listar', 'ver', 'tarefas', 'lista', 'pendentes', 'todas']
-    },
-    {
-      id: 'ai-tech-news',
-      title: 'Notícias de Tecnologia',
-      description: 'Buscar últimas notícias tech com IA',
-      icon: <MdNewspaper />,
-      action: () => executeAICommand('Use a ferramenta getTechNews para buscar as últimas notícias de tecnologia', 'Notícias de Tecnologia'),
-      keywords: ['noticias', 'tech', 'tecnologia', 'hackernews', 'reddit', 'github']
-    },
-    {
-      id: 'ai-search-news',
-      title: 'Buscar Notícias Específicas',
-      description: 'Buscar notícias por palavras-chave',
-      icon: <MdSearch />,
-      action: () => {
-        const keywords = prompt('Digite as palavras-chave para buscar:');
-        if (keywords) executeAICommand(`Use a ferramenta searchNews para buscar notícias sobre: ${keywords}`, 'Busca de Notícias');
-      },
-      keywords: ['buscar', 'procurar', 'noticia', 'pesquisar', 'filtrar']
-    },
-    {
-      id: 'ai-save-note',
-      title: 'Salvar Nota',
-      description: 'Salvar informação no repositório de conhecimento',
-      icon: <MdNote />,
-      action: () => {
-        const title = prompt('Título da nota:');
-        if (title) {
-          const content = prompt('Conteúdo da nota:');
-          if (content) executeAICommand(`Use a ferramenta saveNote para salvar uma nota com título "${title}" e conteúdo: ${content}`, 'Salvar Nota');
-        }
-      },
-      keywords: ['salvar', 'nota', 'anotar', 'guardar', 'documentar', 'memo']
-    },
-    {
-      id: 'ai-search-knowledge',
-      title: 'Buscar no Conhecimento',
-      description: 'Procurar informações salvas anteriormente',
-      icon: <MdFindInPage />,
-      action: () => {
-        const searchQuery = prompt('O que você quer buscar?');
-        if (searchQuery) executeAICommand(`Use a ferramenta searchKnowledge para buscar: ${searchQuery}`, 'Busca no Conhecimento');
-      },
-      keywords: ['buscar', 'procurar', 'encontrar', 'pesquisar', 'base', 'conhecimento']
-    },
-    {
-      id: 'ai-system-status',
-      title: 'Status do Sistema',
-      description: 'Verificar CPU, memória e aplicativo ativo',
-      icon: <MdComputer />,
-      action: () => executeAICommand('Use a ferramenta getSystemStatus para mostrar o status do sistema', 'Status do Sistema'),
-      keywords: ['sistema', 'status', 'cpu', 'memoria', 'performance', 'monitorar']
-    },
-    {
-      id: 'ai-analyze-code',
-      title: 'Analisar Código',
-      description: 'IA analisa o código do projeto atual',
-      icon: <MdCode />,
-      action: () => executeAICommand('Use a ferramenta analyzeCurrentCode para analisar o código do projeto', 'Análise de Código'),
-      keywords: ['analisar', 'codigo', 'revisar', 'code', 'review', 'projeto']
-    },
-    {
-      id: 'ai-run-build',
-      title: 'Executar Build',
-      description: 'Compilar e construir o projeto',
-      icon: <MdBuild />,
-      action: () => executeAICommand('Use a ferramenta runBuild para executar o build do projeto', 'Executar Build'),
-      keywords: ['build', 'compilar', 'construir', 'executar', 'npm']
     }
   ];
 
@@ -225,14 +129,12 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
         cmd.keywords.some(keyword => keyword.toLowerCase().includes(query.toLowerCase()))
       );
 
-  // Separar comandos filtrados por categoria
-  const primaryCommands = filteredCommands.filter(cmd => 
-    ['feed', 'tasks', 'knowledge', 'settings', 'fullscreen'].includes(cmd.id)
-  );
-  
-  const aiCommands = filteredCommands.filter(cmd => 
-    cmd.id.startsWith('ai-')
-  );
+  // Auto scroll para última mensagem no chat
+  useEffect(() => {
+    if (showChat) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, showChat]);
 
   // Resetar índice selecionado quando os comandos mudam
   useEffect(() => {
@@ -254,36 +156,10 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
 
   // Focar no input quando o componente é montado
   useEffect(() => {
-    if (inputRef.current) {
+    if (inputRef.current && !showChat) {
       inputRef.current.focus();
     }
-  }, []);
-
-  // Função para executar comandos da IA
-  const executeAICommand = async (command: string, title: string) => {
-    if (!hasGroqKey) {
-      alert('Configure uma chave de API primeiro nas configurações!');
-      return;
-    }
-
-    try {
-      setAiLoading(true);
-      setAiTitle(title);
-      setShowAIPopup(true);
-      
-      const result = await window.electronAPI.processCommand(command);
-      
-      if (result.success) {
-        setAiResponse(result.response);
-      } else {
-        setAiResponse(`Erro: ${result.error}`);
-      }
-    } catch (error) {
-      setAiResponse(`Erro ao processar comando: ${error}`);
-    } finally {
-      setAiLoading(false);
-    }
-  };
+  }, [showChat]);
 
   // Função para lidar com seleção de comandos
   const handleCommandSelect = (command: Command) => {
@@ -291,14 +167,14 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
     setQuery('');
   };
 
-  // Lidar com teclas
+  // Lidar com teclas no modo busca
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    const totalCommands = primaryCommands.length + aiCommands.length;
+    if (showChat) return; // Não interceptar teclas no modo chat
     
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setSelectedIndex(prev => Math.min(prev + 1, totalCommands - 1));
+        setSelectedIndex(prev => Math.min(prev + 1, filteredCommands.length - 1));
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -307,20 +183,23 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
       case 'Enter':
         e.preventDefault();
         if (query.trim() && filteredCommands.length === 0 && hasGroqKey) {
-          // Enviar query diretamente para IA
-          executeAICommand(query, `Comando: "${query}"`);
+          // Abrir chat e enviar query diretamente
+          setShowChat(true);
+          handleInputChange({ target: { value: query } } as any);
+          setQuery('');
         } else if (filteredCommands.length > 0) {
           // Executar comando selecionado
-          const allFilteredCommands = [...primaryCommands, ...aiCommands];
-          if (allFilteredCommands[selectedIndex]) {
-            handleCommandSelect(allFilteredCommands[selectedIndex]);
-          }
+          handleCommandSelect(filteredCommands[selectedIndex]);
         }
         break;
       case 'Escape':
         e.preventDefault();
-        setQuery('');
-        setSelectedIndex(0);
+        if (showChat) {
+          setShowChat(false);
+        } else {
+          setQuery('');
+          setSelectedIndex(0);
+        }
         break;
       case 'k':
         if (e.metaKey || e.ctrlKey) {
@@ -332,10 +211,128 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
     }
   };
 
+  // Renderizar interface de chat
+  if (showChat) {
+    return (
+      <div className="spotlight-container spotlight-chat-mode">
+        <div className="spotlight-chat-header">
+          <div className="spotlight-chat-title">
+            <span>Chat IA</span>
+            <span className="spotlight-chat-status">
+              {status === 'streaming' ? '⚡ Pensando...' : '💬 Pronto'}
+            </span>
+          </div>
+          <button 
+            className="spotlight-chat-back"
+            onClick={() => setShowChat(false)}
+          >
+            ← Voltar
+          </button>
+        </div>
+
+        <div className="spotlight-chat-messages">
+          {messages.length === 0 && (
+            <div className="spotlight-chat-welcome">
+              <MdChat className="welcome-icon" />
+              <h4>Olá! Sou o Duckduki</h4>
+              <p>Posso ajudar com tarefas, notícias, sistema e muito mais!</p>
+              <div className="spotlight-chat-suggestions">
+                <button onClick={() => handleInputChange({ target: { value: 'Quais são as últimas notícias de tecnologia?' } } as any)}>
+                  📰 Notícias
+                </button>
+                <button onClick={() => handleInputChange({ target: { value: 'Criar uma tarefa para estudar React' } } as any)}>
+                  📋 Nova tarefa
+                </button>
+                <button onClick={() => handleInputChange({ target: { value: 'Como está o sistema?' } } as any)}>
+                  💻 Sistema
+                </button>
+              </div>
+            </div>
+          )}
+
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={`spotlight-chat-message ${
+                message.role === 'user' ? 'spotlight-chat-message-user' : 'spotlight-chat-message-assistant'
+              }`}
+            >
+              <div className="spotlight-chat-message-avatar">
+                {message.role === 'user' ? '👤' : '🤖'}
+              </div>
+              <div className="spotlight-chat-message-content">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                <div className="spotlight-chat-message-time">
+                  {new Date(message.createdAt || Date.now()).toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {status === 'streaming' && (
+            <div className="spotlight-chat-message spotlight-chat-message-assistant">
+              <div className="spotlight-chat-message-avatar">🤖</div>
+              <div className="spotlight-chat-message-content">
+                <div className="spotlight-chat-typing">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {error && (
+            <div className="spotlight-chat-error">
+              <span>⚠️ Erro: {error.message}</span>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        <form className="spotlight-chat-form" onSubmit={handleSubmit}>
+          <div className="spotlight-chat-input-container">
+            <input
+              className="spotlight-chat-input"
+              value={input}
+              onChange={handleInputChange}
+              placeholder="Digite sua mensagem..."
+              disabled={status === 'streaming'}
+              autoFocus
+            />
+            <button
+              type="submit"
+              className="spotlight-chat-send"
+              disabled={status === 'streaming' || !input.trim()}
+            >
+              <MdSend />
+            </button>
+          </div>
+          
+          <div className="spotlight-chat-tools">
+            <span>🛠️ Ferramentas: Email, Tarefas, Notícias, Conhecimento, Sistema, Build</span>
+          </div>
+        </form>
+
+        <div className="spotlight-footer">
+          <div className="footer-shortcuts">
+            <span><kbd>Esc</kbd> Voltar</span>
+            <span><kbd>⏎</kbd> Enviar</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Renderizar interface padrão de busca
   return (
     <div className="spotlight-container">
       <div className="spotlight-search">
-        <MdSearch className="search-icon" />
+        <img src="icon.png" alt="Duckduki" className="search-icon" />
         <input
           ref={inputRef}
           type="text"
@@ -353,56 +350,25 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
 
       {filteredCommands.length > 0 ? (
         <div className="spotlight-results">
-          {/* Comandos principais */}
-          {primaryCommands.length > 0 && (
-            <>
-              <div className="result-separator">Comandos Principais</div>
-              {primaryCommands.map((command, index) => (
-                <div
-                  key={command.id}
-                  ref={(el) => resultItemsRef.current[index] = el}
-                  className={`result-item ${selectedIndex === index ? 'selected' : ''}`}
-                  onClick={() => handleCommandSelect(command)}
-                >
-                  <span className="result-icon">{command.icon}</span>
-                  <div className="result-content">
-                    <div className="result-title">{command.title}</div>
-                    <div className="result-description">{command.description}</div>
-                  </div>
-                  <span className="result-shortcut">⏎</span>
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Ferramentas de IA */}
-          {aiCommands.length > 0 && (
-            <>
-              <div className="result-separator">Ferramentas de IA</div>
-              {aiCommands.map((command, index) => {
-                const actualIndex = primaryCommands.length + index;
-                return (
-                  <div
-                    key={command.id}
-                    ref={(el) => resultItemsRef.current[actualIndex] = el}
-                    className={`result-item ${selectedIndex === actualIndex ? 'selected' : ''}`}
-                    onClick={() => handleCommandSelect(command)}
-                  >
-                    <span className="result-icon">{command.icon}</span>
-                    <div className="result-content">
-                      <div className="result-title">{command.title}</div>
-                      <div className="result-description">{command.description}</div>
-                    </div>
-                    <span className="result-shortcut">⏎</span>
-                  </div>
-                );
-              })}
-            </>
-          )}
+          {filteredCommands.map((command, index) => (
+            <div
+              key={command.id}
+              ref={(el) => resultItemsRef.current[index] = el}
+              className={`result-item ${selectedIndex === index ? 'selected' : ''}`}
+              onClick={() => handleCommandSelect(command)}
+            >
+              <span className="result-icon">{command.icon}</span>
+              <div className="result-content">
+                <div className="result-title">{command.title}</div>
+                <div className="result-description">{command.description}</div>
+              </div>
+              <span className="result-shortcut">⏎</span>
+            </div>
+          ))}
         </div>
       ) : query.length > 0 ? (
         <div className="spotlight-message">
-          <MdSearch className="message-icon" />
+          <MdChat className="message-icon" />
           <div className="message-content">
             <div className="message-title">
               {hasGroqKey ? 'Conversar com IA' : 'Configure a IA'}
@@ -434,17 +400,6 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
           <span><kbd>Esc</kbd> Fechar</span>
         </div>
       </div>
-
-      {/* Popup de resposta da IA */}
-      {showAIPopup && (
-        <AIResponsePopup
-          isVisible={showAIPopup}
-          title={aiTitle}
-          content={aiResponse}
-          isLoading={aiLoading}
-          onClose={() => setShowAIPopup(false)}
-        />
-      )}
     </div>
   );
 };
