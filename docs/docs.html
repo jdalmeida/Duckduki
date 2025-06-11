@@ -38,6 +38,8 @@
                         <li><a href="#usage">Como Usar</a></li>
                         <li><a href="#api">API Reference</a></li>
                         <li><a href="#troubleshooting">Troubleshooting</a></li>
+                        <li><a href="#development">Desenvolvimento</a></li>
+                        <li><a href="#changelog">Changelog</a></li>
                     </ul>
                 </nav>
             </div>
@@ -46,82 +48,770 @@
         <main class="docs-main">
             <div class="docs-content">
                 <section id="overview" class="docs-section">
-                    <h1>🦆 Duckduki - Documentação</h1>
-                    <p class="lead">Assistente Desktop Inteligente com IA Generativa via Groq</p>
+                    <h1>🦆 Duckduki - Documentação Completa</h1>
+                    <p class="lead">Assistente Desktop Inteligente com IA Generativa Multiplataforma</p>
                     
                     <h2>O que é o Duckduki?</h2>
-                    <p>O Duckduki é um aplicativo desktop multiplataforma que utiliza IA generativa para aumentar sua produtividade através de assistência inteligente, automações e sugestões contextuais.</p>
-                </section>
-
-                <section id="installation" class="docs-section">
-                    <h1>📦 Instalação</h1>
+                    <p>O Duckduki é um assistente desktop multiplataforma (Windows, macOS, Linux) que utiliza inteligência artificial generativa para maximizar sua produtividade. Integra-se com múltiplos provedores de IA (Groq, OpenAI, Google Gemini) oferecendo análise de código, automação de tarefas, monitoramento inteligente e muito mais.</p>
                     
-                    <h2>Requisitos</h2>
-                    <ul>
-                        <li>Node.js 18+</li>
-                        <li>npm ou yarn</li>
-                        <li>Git</li>
-                    </ul>
-
-                    <h2>Instalação via NPM</h2>
-                    <div class="code-block">
-                        <pre><code>git clone https://github.com/seu-usuario/duckduki.git
-cd duckduki
-npm run setup
-npm run dev</code></pre>
+                    <h2>🌟 Características Principais</h2>
+                    <div class="features-overview">
+                        <h3>🤖 IA Generativa Avançada</h3>
+                        <ul>
+                            <li><strong>Múltiplos Provedores:</strong> Groq (LLaMA 3), OpenAI (GPT-4o), Google Gemini</li>
+                            <li><strong>Processamento Contextual:</strong> Analisa contexto e histórico de conversas</li>
+                            <li><strong>Ferramentas Inteligentes:</strong> +20 ferramentas integradas para automação</li>
+                        </ul>
+                        
+                        <h3>🎯 Automação Inteligente</h3>
+                        <ul>
+                            <li><strong>Detecção de Contexto:</strong> Monitora aplicativos ativos e oferece sugestões</li>
+                            <li><strong>Análise de Código:</strong> Integração com VS Code e análise automática</li>
+                            <li><strong>Build Automático:</strong> Detecção e execução de builds (Node.js, Rust, Java, etc.)</li>
+                        </ul>
+                        
+                        <h3>📧 Gestão de Comunicação</h3>
+                        <ul>
+                            <li><strong>Resumos de Email:</strong> Análise IMAP com resumos inteligentes</li>
+                            <li><strong>Integração Google:</strong> Calendar, Tasks e Gmail</li>
+                            <li><strong>Notificações Contextuais:</strong> Alertas personalizados</li>
+                        </ul>
                     </div>
                 </section>
 
-                <section id="configuration" class="docs-section">
-                    <h1>⚙️ Configuração</h1>
+                <section id="installation" class="docs-section">
+                    <h1>📦 Instalação Completa</h1>
                     
-                    <h2>API Groq</h2>
-                    <p>Para usar o Duckduki, você precisa de uma chave API do Groq:</p>
+                    <h2>🔧 Requisitos do Sistema</h2>
+                    <div class="requirements-grid">
+                        <div class="requirement-item">
+                            <h3>💻 Software Básico</h3>
+                            <ul>
+                                <li>Node.js 18+ (recomendado: 20+)</li>
+                                <li>npm 8+ ou yarn 1.22+</li>
+                                <li>Git 2.20+</li>
+                                <li>Electron-compatible OS</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="requirement-item">
+                            <h3>🐧 Dependências Linux</h3>
+                            <div class="code-block">
+                                <pre><code># Ubuntu/Debian
+sudo apt update
+sudo apt install libsecret-1-dev libxss1 libgconf-2-4
+
+# Fedora/RHEL
+sudo dnf install libsecret-devel libXScrnSaver GConf2
+
+# Arch Linux
+sudo pacman -S libsecret libxss gconf</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2>🚀 Instalação Rápida</h2>
+                    <div class="code-block">
+                        <pre><code># 1. Clonar repositório
+git clone https://github.com/seu-usuario/duckduki.git
+cd duckduki
+
+# 2. Setup automático (instala deps + configura ambiente)
+npm run setup
+
+# 3. Desenvolvimento
+npm run dev
+
+# 4. Build para produção
+npm run build
+
+# 5. Distribuição
+npm run dist</code></pre>
+                    </div>
+                    
+                    <h2>🔑 Configuração de API Keys</h2>
+                    <p>Após a instalação, você precisará configurar pelo menos um provedor de IA:</p>
                     <ol>
-                        <li>Acesse <a href="https://console.groq.com">console.groq.com</a></li>
-                        <li>Crie uma conta e gere uma API key</li>
-                        <li>Configure a chave no aplicativo</li>
+                        <li><strong>Groq (Recomendado):</strong> <a href="https://console.groq.com">console.groq.com</a> - Acesso gratuito, velocidade ultra-rápida</li>
+                        <li><strong>OpenAI:</strong> <a href="https://platform.openai.com">platform.openai.com</a> - Modelos GPT-4</li>
+                        <li><strong>Google AI:</strong> <a href="https://aistudio.google.com">aistudio.google.com</a> - Gemini models</li>
+                    </ol>
+                    
+                    <h2>📦 Scripts Disponíveis</h2>
+                    <table class="scripts-table">
+                        <tr><th>Comando</th><th>Descrição</th></tr>
+                        <tr><td><code>npm run setup</code></td><td>Configuração inicial automática</td></tr>
+                        <tr><td><code>npm run dev</code></td><td>Modo desenvolvimento</td></tr>
+                        <tr><td><code>npm run build</code></td><td>Build para produção</td></tr>
+                        <tr><td><code>npm run dist</code></td><td>Criar executáveis</td></tr>
+                        <tr><td><code>npm run dist:win</code></td><td>Build Windows (.exe)</td></tr>
+                        <tr><td><code>npm run dist:mac</code></td><td>Build macOS (.dmg)</td></tr>
+                        <tr><td><code>npm run dist:linux</code></td><td>Build Linux (.AppImage)</td></tr>
+                    </table>
+                </section>
+
+                <section id="configuration" class="docs-section">
+                    <h1>⚙️ Configuração Avançada</h1>
+                    
+                    <h2>🤖 Provedores de IA Suportados</h2>
+                    
+                    <h3>🚀 Groq (Recomendado)</h3>
+                    <div class="provider-info">
+                        <p><strong>Vantagens:</strong> Velocidade ultra-rápida, acesso gratuito generoso</p>
+                        <p><strong>Modelos disponíveis:</strong></p>
+                        <ul>
+                            <li><code>llama3-8b-8192</code> (padrão) - Balanceado, rápido</li>
+                            <li><code>llama3-70b-8192</code> - Mais inteligente, qualidade superior</li>
+                            <li><code>mixtral-8x7b-32768</code> - Excelente para código</li>
+                            <li><code>gemma-7b-it</code> - Otimizado para instruções</li>
+                        </ul>
+                        <div class="code-block">
+                            <pre><code># Configuração
+1. Acesse: https://console.groq.com
+2. Criar conta gratuita
+3. Gerar API Key
+4. Colar no Duckduki > Configurações > IA > Groq</code></pre>
+                        </div>
+                    </div>
+                    
+                    <h3>🧠 OpenAI</h3>
+                    <div class="provider-info">
+                        <p><strong>Vantagens:</strong> Modelos mais avançados, melhor compreensão</p>
+                        <p><strong>Modelos disponíveis:</strong></p>
+                        <ul>
+                            <li><code>gpt-4o-mini</code> (padrão) - Custo-benefício</li>
+                            <li><code>gpt-4o</code> - Estado da arte</li>
+                            <li><code>gpt-4-turbo</code> - Rápido e potente</li>
+                            <li><code>gpt-3.5-turbo</code> - Econômico</li>
+                        </ul>
+                    </div>
+                    
+                    <h3>🌟 Google Gemini</h3>
+                    <div class="provider-info">
+                        <p><strong>Vantagens:</strong> Multimodal, análise de contexto longo</p>
+                        <p><strong>Modelos disponíveis:</strong></p>
+                        <ul>
+                            <li><code>gemini-1.5-flash</code> (padrão) - Rápido e eficiente</li>
+                            <li><code>gemini-1.5-pro</code> - Máxima qualidade</li>
+                            <li><code>gemini-2.5-flash</code> - Nova geração</li>
+                            <li><code>gemini-2.0-pro</code> - Estado da arte do Google</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>📧 Configuração de Email (IMAP)</h2>
+                    
+                    <h3>Gmail</h3>
+                    <ol>
+                        <li>Ative a verificação em 2 etapas na conta Google</li>
+                        <li>Gere uma "Senha de app" específica para Duckduki</li>
+                        <li>Use essa senha no campo "Senha" do Duckduki</li>
+                        <li>Servidor: <code>imap.gmail.com:993 (SSL)</code></li>
+                    </ol>
+                    
+                    <h3>Outlook/Hotmail</h3>
+                    <ol>
+                        <li>Use suas credenciais normais</li>
+                        <li>Certifique-se que IMAP está habilitado</li>
+                        <li>Servidor: <code>outlook.office365.com:993 (SSL)</code></li>
+                    </ol>
+                    
+                    <h2>🔗 Integração Google Services</h2>
+                    <p>Para usar Calendar e Tasks do Google:</p>
+                    <ol>
+                        <li>Acesse <a href="https://console.cloud.google.com">Google Cloud Console</a></li>
+                        <li>Crie um projeto ou use existente</li>
+                        <li>Ative APIs: Calendar API, Tasks API</li>
+                        <li>Crie credenciais OAuth 2.0</li>
+                        <li>Configure no Duckduki > Configurações > Google</li>
                     </ol>
                 </section>
 
                 <section id="usage" class="docs-section">
-                    <h1>🎯 Como Usar</h1>
+                    <h1>🎯 Guia Completo de Uso</h1>
                     
-                    <h2>Comandos Principais</h2>
+                    <h2>🚀 Atalhos Globais</h2>
+                    <table class="shortcuts-table">
+                        <tr><th>Ação</th><th>Windows/Linux</th><th>macOS</th></tr>
+                        <tr><td>Abrir Duckduki</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd></td><td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd></td></tr>
+                        <tr><td>Modo Chat</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd></td><td><kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd></td></tr>
+                        <tr><td>Fechar Interface</td><td><kbd>Esc</kbd></td><td><kbd>Esc</kbd></td></tr>
+                    </table>
+                    
+                    <h2>💬 Comandos de IA e Automação</h2>
+                    
+                    <h3>📧 Gestão de Email</h3>
+                    <div class="commands-section">
+                        <ul>
+                            <li><code>resumo dos emails</code> - Análise inteligente da caixa de entrada</li>
+                            <li><code>emails importantes hoje</code> - Filtra emails prioritários</li>
+                            <li><code>responder email sobre [assunto]</code> - Gera rascunho de resposta</li>
+                        </ul>
+                    </div>
+                    
+                    <h3>👨‍💻 Desenvolvimento</h3>
+                    <div class="commands-section">
+                        <ul>
+                            <li><code>analisar código atual</code> - Análise do código aberto</li>
+                            <li><code>executar build</code> - Build automático do projeto</li>
+                            <li><code>executar testes</code> - Roda testes unitários</li>
+                            <li><code>deploy para produção</code> - Deploy automatizado</li>
+                            <li><code>revisar pull request</code> - Análise de code review</li>
+                        </ul>
+                    </div>
+                    
+                    <h3>📅 Produtividade</h3>
+                    <div class="commands-section">
+                        <ul>
+                            <li><code>planejar meu dia</code> - Organização inteligente de agenda</li>
+                            <li><code>criar reunião sobre [assunto]</code> - Agendar no Google Calendar</li>
+                            <li><code>adicionar tarefa: [descrição]</code> - Nova tarefa com IA</li>
+                            <li><code>status das tarefas</code> - Relatório de progresso</li>
+                            <li><code>resumo do dia</code> - Overview de eventos e tarefas</li>
+                        </ul>
+                    </div>
+                    
+                    <h3>💡 Criatividade e Pesquisa</h3>
+                    <div class="commands-section">
+                        <ul>
+                            <li><code>tendências tech</code> - Últimas novidades tecnológicas</li>
+                            <li><code>pesquisar sobre [assunto]</code> - Busca contextual</li>
+                            <li><code>gerar ideias para [projeto]</code> - Brainstorming assistido</li>
+                            <li><code>explicar [conceito]</code> - Explicações detalhadas</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>🎙️ Comandos por Voz</h2>
+                    <p>O Duckduki suporta entrada por voz em português brasileiro:</p>
+                    <ol>
+                        <li>Clique no ícone do microfone 🎤</li>
+                        <li>Fale seu comando naturalmente</li>
+                        <li>Clique novamente para parar a gravação</li>
+                        <li>O comando será processado automaticamente</li>
+                    </ol>
+                    
+                    <h2>🔧 Ferramentas Integradas (AI Tools)</h2>
+                    
+                    <h3>📋 Gestão de Tarefas</h3>
                     <ul>
-                        <li><code>resumo dos emails</code> - Gera resumo inteligente dos emails</li>
-                        <li><code>analisar código atual</code> - Analisa código no editor</li>
-                        <li><code>planejar meu dia</code> - Cria plano de trabalho</li>
-                        <li><code>executar build</code> - Roda build do projeto</li>
+                        <li><strong>Análise Inteligente:</strong> IA detecta urgência e prioridade</li>
+                        <li><strong>Sistema de Prioridades:</strong> 🔴 Crítica, 🟠 Alta, 🟡 Média, 🟢 Baixa</li>
+                        <li><strong>Filtros Avançados:</strong> Por status, prioridade, categoria</li>
+                        <li><strong>Sincronização:</strong> Google Tasks integration</li>
+                    </ul>
+                    
+                    <h3>📅 Calendar Management</h3>
+                    <ul>
+                        <li><strong>Criação de Eventos:</strong> Linguagem natural → Calendar</li>
+                        <li><strong>Análise de Conflitos:</strong> Detecção automática de sobreposições</li>
+                        <li><strong>Sugestões de Horários:</strong> Based em padrões de uso</li>
+                        <li><strong>Resumos Inteligentes:</strong> Overview diário/semanal</li>
+                    </ul>
+                    
+                    <h3>💻 System Monitoring</h3>
+                    <ul>
+                        <li><strong>Status de Sistema:</strong> CPU, RAM, processos</li>
+                        <li><strong>Detecção de Apps:</strong> Monitora aplicação ativa</li>
+                        <li><strong>Sugestões Contextuais:</strong> Based no app em uso</li>
+                        <li><strong>Performance Alerts:</strong> Avisos de alta utilização</li>
                     </ul>
                 </section>
 
                 <section id="api" class="docs-section">
-                    <h1>🔧 API Reference</h1>
+                    <h1>🔧 API Reference & Arquitetura</h1>
                     
-                    <h2>AI Providers</h2>
-                    <p>O Duckduki suporta múltiplos provedores de IA:</p>
+                    <h2>🏗️ Arquitetura do Sistema</h2>
+                    <div class="architecture-overview">
+                        <h3>Componentes Principais</h3>
+                        <ul>
+                            <li><strong>Main Process (Electron):</strong> Gerencia janelas, IPC, e serviços do sistema</li>
+                            <li><strong>Renderer Process (React):</strong> Interface de usuário e interações</li>
+                            <li><strong>AI Manager:</strong> Orquestra provedores de IA e ferramentas</li>
+                            <li><strong>Security Manager:</strong> Gerencia chaves API e armazenamento seguro</li>
+                            <li><strong>Knowledge Service:</strong> Base de conhecimento e contexto</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>🤖 AI Tools Framework</h2>
+                    
+                    <h3>Email Tools</h3>
+                    <div class="code-block">
+                        <pre><code>getEmailSummary()
+  ↳ Conecta via IMAP
+  ↳ Analisa emails recentes  
+  ↳ Gera resumo inteligente com IA
+  ↳ Retorna: { summary, priority_emails, stats }</code></pre>
+                    </div>
+                    
+                    <h3>Task Management Tools</h3>
+                    <div class="code-block">
+                        <pre><code>addTask(description)
+  ↳ Análise de linguagem natural
+  ↳ Extrai: urgência, facilidade, categoria
+  ↳ Define prioridade automática
+  ↳ Salva no banco local + Google Tasks
+  
+getTasks(status?, priority?)
+  ↳ Filtros opcionais
+  ↳ Retorna tarefas formatadas
+  ↳ Incluí estatísticas e insights</code></pre>
+                    </div>
+                    
+                    <h3>Google Integration Tools</h3>
+                    <div class="code-block">
+                        <pre><code>createCalendarEvent(title, start, end, description?)
+  ↳ OAuth2 authentication
+  ↳ Conflict detection
+  ↳ Calendar integration
+  
+getGoogleDayOverview()
+  ↳ Combina Calendar + Tasks
+  ↳ Análise de carga de trabalho
+  ↳ Sugestões de otimização</code></pre>
+                    </div>
+                    
+                    <h3>System Monitoring Tools</h3>
+                    <div class="code-block">
+                        <pre><code>getSystemStatus()
+  ↳ CPU, RAM, active processes
+  ↳ Active window detection
+  ↳ Performance insights
+  
+analyzeCurrentCode()
+  ↳ Detecta projeto ativo
+  ↳ Analisa código no editor
+  ↳ Sugestões de melhorias</code></pre>
+                    </div>
+                    
+                    <h2>🔌 Extensibilidade</h2>
+                    
+                    <h3>Criando Novas Ferramentas</h3>
+                    <div class="code-block">
+                        <pre><code>// Exemplo: Nova ferramenta customizada
+class CustomTool {
+  async execute(parameters) {
+    // Lógica da ferramenta
+    return { success: true, data: result };
+  }
+  
+  getDefinition() {
+    return {
+      name: 'custom_tool',
+      description: 'Descrição da ferramenta',
+      parameters: {
+        // Schema Zod para validação
+      }
+    };
+  }
+}</code></pre>
+                    </div>
+                    
+                    <h3>Registrando Ferramentas</h3>
+                    <div class="code-block">
+                        <pre><code>// Em AIToolsService
+this.tools.set('custom_tool', new CustomTool());
+
+// Schema para IA
+tools: {
+  custom_tool: {
+    description: 'Executa função customizada',
+    parameters: z.object({
+      input: z.string()
+    })
+  }
+}</code></pre>
+                    </div>
+                    
+                    <h2>📊 Storage & Data</h2>
+                    
+                    <h3>Electron Store (Configurações)</h3>
                     <ul>
-                        <li>Groq (principal)</li>
-                        <li>OpenAI</li>
-                        <li>Google AI</li>
+                        <li>Configurações de UI e preferências</li>
+                        <li>Estado da aplicação</li>
+                        <li>Cache de dados não sensíveis</li>
+                    </ul>
+                    
+                    <h3>Keychain/Keytar (Chaves Seguras)</h3>
+                    <ul>
+                        <li>API keys dos provedores de IA</li>
+                        <li>Credenciais de email</li>
+                        <li>Tokens OAuth</li>
+                    </ul>
+                    
+                    <h3>Knowledge Base (SQLite)</h3>
+                    <ul>
+                        <li>Histórico de conversas</li>
+                        <li>Notas e documentação</li>
+                        <li>Cache de contexto</li>
                     </ul>
                 </section>
 
                 <section id="troubleshooting" class="docs-section">
-                    <h1>🔧 Troubleshooting</h1>
+                    <h1>🔧 Troubleshooting Avançado</h1>
                     
-                    <h2>Problemas Comuns</h2>
-                    <h3>API Key não funciona</h3>
-                    <p>Verifique se a chave está correta e tem permissões adequadas.</p>
+                    <h2>🚨 Problemas Críticos</h2>
                     
-                    <h3>Linux - Dependências</h3>
-                    <div class="code-block">
-                        <pre><code># Ubuntu/Debian
-sudo apt install libsecret-1-dev libxss1 libgconf-2-4
+                    <h3>❌ Aplicativo não Inicia</h3>
+                    <div class="troubleshoot-item">
+                        <p><strong>Sintomas:</strong> Aplicativo fecha imediatamente ou tela branca</p>
+                        <p><strong>Soluções:</strong></p>
+                        <div class="code-block">
+                            <pre><code># 1. Limpar cache e dependências
+rm -rf node_modules package-lock.json
+npm install
 
-# Fedora/RHEL
-sudo dnf install libsecret-devel libXScrnSaver GConf2</code></pre>
+# 2. Rebuild nativo modules
+npm run rebuild
+
+# 3. Verificar compatibilidade Electron
+npm ls electron</code></pre>
+                        </div>
+                    </div>
+                    
+                    <h3>🔑 API Keys não Salvam</h3>
+                    <div class="troubleshoot-item">
+                        <p><strong>Sintomas:</strong> Chaves desaparecem após reiniciar</p>
+                        <p><strong>Soluções por Plataforma:</strong></p>
+                        
+                        <h4>🐧 Linux</h4>
+                        <div class="code-block">
+                            <pre><code># Instalar libsecret
+sudo apt install libsecret-1-dev  # Ubuntu/Debian
+sudo dnf install libsecret-devel  # Fedora
+sudo pacman -S libsecret          # Arch
+
+# Verificar keyring
+gnome-keyring-daemon --version</code></pre>
+                        </div>
+                        
+                        <h4>🍎 macOS</h4>
+                        <div class="code-block">
+                            <pre><code># Verificar Keychain Access
+security find-generic-password -a "duckduki"
+
+# Reset keychain se necessário
+security delete-generic-password -a "duckduki"</code></pre>
+                        </div>
+                        
+                        <h4>🪟 Windows</h4>
+                        <div class="code-block">
+                            <pre><code># Verificar Windows Credential Manager
+cmdkey /list | findstr "duckduki"
+
+# Executar como administrador se necessário</code></pre>
+                        </div>
+                    </div>
+                    
+                    <h2>⚠️ Problemas de Conectividade</h2>
+                    
+                    <h3>🌐 Erro de API Groq/OpenAI</h3>
+                    <div class="troubleshoot-item">
+                        <p><strong>Mensagens típicas:</strong> "API key invalid", "Rate limit exceeded"</p>
+                        <p><strong>Diagnóstico:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Testar chave Groq
+curl -H "Authorization: Bearer SEU_KEY" \
+     https://api.groq.com/openai/v1/models
+
+# Testar chave OpenAI
+curl -H "Authorization: Bearer SEU_KEY" \
+     https://api.openai.com/v1/models</code></pre>
+                        </div>
+                        <p><strong>Soluções:</strong></p>
+                        <ul>
+                            <li>Verificar validade da chave na console do provedor</li>
+                            <li>Verificar limites de uso/billing</li>
+                            <li>Tentar provedor alternativo</li>
+                            <li>Verificar firewall/proxy corporativo</li>
+                        </ul>
+                    </div>
+                    
+                    <h3>📧 Problemas de Email IMAP</h3>
+                    <div class="troubleshoot-item">
+                        <p><strong>Gmail:</strong></p>
+                        <ul>
+                            <li>Ativar 2FA na conta Google</li>
+                            <li>Gerar senha específica para app</li>
+                            <li>Verificar se IMAP está habilitado</li>
+                        </ul>
+                        
+                        <p><strong>Outlook:</strong></p>
+                        <ul>
+                            <li>Usar credenciais normais (não senha de app)</li>
+                            <li>Verificar configurações IMAP no Outlook.com</li>
+                            <li>Tentar OAuth se disponível</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>🐛 Problemas de Performance</h2>
+                    
+                    <h3>💻 Alto Uso de CPU/RAM</h3>
+                    <div class="troubleshoot-item">
+                        <p><strong>Diagnóstico:</strong></p>
+                        <div class="code-block">
+                            <pre><code># Monitorar processos Electron
+ps aux | grep -i electron
+top -p $(pgrep -f duckduki)
+
+# Windows
+tasklist | findstr electron</code></pre>
+                        </div>
+                        <p><strong>Otimizações:</strong></p>
+                        <ul>
+                            <li>Reduzir frequência de monitoramento de sistema</li>
+                            <li>Limpar cache de conhecimento antigo</li>
+                            <li>Desabilitar recursos não utilizados</li>
+                            <li>Ajustar configurações de IA (modelos menores)</li>
+                        </ul>
+                    </div>
+                    
+                    <h3>🔄 Interface Travando</h3>
+                    <div class="troubleshoot-item">
+                        <p><strong>Soluções:</strong></p>
+                        <ul>
+                            <li>Abrir DevTools: <kbd>Ctrl+Shift+I</kbd></li>
+                            <li>Verificar erros no console</li>
+                            <li>Reiniciar processo renderer</li>
+                            <li>Limpar cache da aplicação</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>🔧 Ferramentas de Debug</h2>
+                    
+                    <h3>📊 Logs do Sistema</h3>
+                    <div class="code-block">
+                        <pre><code># Localização dos logs
+# Linux: ~/.config/duckduki/logs/
+# macOS: ~/Library/Logs/duckduki/
+# Windows: %APPDATA%/duckduki/logs/
+
+# Executar com debug verbose
+DEBUG=* npm run dev
+
+# Logs específicos
+DEBUG=duckduki:* npm run dev</code></pre>
+                    </div>
+                    
+                    <h3>🔍 Modo Debug Avançado</h3>
+                    <div class="code-block">
+                        <pre><code># Habilitar DevTools por padrão
+export ELECTRON_ENABLE_DEVTOOLS=1
+
+# Desabilitar segurança para debug
+export ELECTRON_DISABLE_SECURITY_WARNINGS=1
+
+# Debug específico de módulos
+export DEBUG=ai-tools,email-service,groq-client</code></pre>
+                    </div>
+                    
+                    <h2>📞 Suporte</h2>
+                    <div class="support-section">
+                        <p>Se os problemas persistirem:</p>
+                        <ul>
+                            <li>📁 <strong>Coletar logs:</strong> Anexar arquivos de log relevantes</li>
+                            <li>💻 <strong>Info do sistema:</strong> OS, versão Node.js, versão Electron</li>
+                            <li>📝 <strong>Passos para reproduzir:</strong> Detalhar o que estava fazendo</li>
+                            <li>🐛 <strong>Abrir issue:</strong> GitHub repository com todas as informações</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section id="development" class="docs-section">
+                    <h1>👨‍💻 Guia de Desenvolvimento</h1>
+                    
+                    <h2>🏗️ Estrutura do Projeto</h2>
+                    <div class="code-block">
+                        <pre><code>duckduki/
+├── src/
+│   ├── main/                     # Processo principal (Electron)
+│   │   ├── index.ts              # Entry point e configuração IPC
+│   │   ├── aiManager.ts          # Orquestrador de IA
+│   │   ├── aiProviders/          # Clientes de IA (Groq, OpenAI, Google)
+│   │   ├── aiTools/              # Ferramentas integradas
+│   │   ├── aiToolsService.ts     # Coordenador de ferramentas
+│   │   ├── securityManager.ts    # Gestão segura de chaves
+│   │   ├── knowledgeService.ts   # Base de conhecimento
+│   │   ├── emailService.ts       # Integração IMAP
+│   │   ├── processMonitor.ts     # Monitoramento de sistema
+│   │   └── deployService.ts      # Automação de builds
+│   ├── renderer/                 # Interface React
+│   │   ├── App.tsx               # Componente principal
+│   │   ├── components/           # Componentes UI
+│   │   ├── contexts/             # Context providers
+│   │   ├── settings/             # Painel de configurações
+│   │   └── widgets/              # Widgets especializados
+│   └── preload.ts                # Bridge segura IPC
+├── assets/                       # Recursos estáticos
+├── docs/                         # Documentação
+└── release/                      # Builds de distribuição</code></pre>
+                    </div>
+                    
+                    <h2>🔧 Setup de Desenvolvimento</h2>
+                    <div class="code-block">
+                        <pre><code># 1. Fork e clone
+git clone https://github.com/seu-usuario/duckduki.git
+cd duckduki
+
+# 2. Instalar dependências
+npm install
+
+# 3. Setup ambiente de desenvolvimento
+npm run setup
+
+# 4. Executar em modo dev (hot reload)
+npm run dev
+
+# 5. Build para teste
+npm run build
+
+# 6. Rodar testes
+npm test</code></pre>
+                    </div>
+                    
+                    <h2>🎯 Contribuindo</h2>
+                    
+                    <h3>🐛 Reportando Bugs</h3>
+                    <ol>
+                        <li>Verificar issues existentes</li>
+                        <li>Usar template de bug report</li>
+                        <li>Incluir logs e informações do sistema</li>
+                        <li>Passos claros para reproduzir</li>
+                    </ol>
+                    
+                    <h3>✨ Novos Recursos</h3>
+                    <ol>
+                        <li>Abrir discussion para feedback</li>
+                        <li>Implementar com testes</li>
+                        <li>Documentar na docs/</li>
+                        <li>Seguir padrões de código existentes</li>
+                    </ol>
+                    
+                    <h3>🔧 Adicionando Novas AI Tools</h3>
+                    <div class="code-block">
+                        <pre><code>// 1. Criar nova tool em src/main/aiTools/
+export class NovaFerramenta {
+  async execute(params: any) {
+    // Lógica da ferramenta
+    return { success: true, data: resultado };
+  }
+  
+  getDefinition() {
+    return {
+      name: 'nova_ferramenta',
+      description: 'Descrição da ferramenta',
+      parameters: {
+        type: 'object',
+        properties: {
+          input: { type: 'string' }
+        }
+      }
+    };
+  }
+}
+
+// 2. Registrar em AIToolsService
+import { NovaFerramenta } from './aiTools/novaFerramenta';
+
+// Em constructor:
+this.novaFerramenta = new NovaFerramenta();
+
+// Em processWithToolsStream:
+nova_ferramenta: {
+  description: 'Executa nova funcionalidade',
+  parameters: z.object({
+    input: z.string()
+  }),
+  execute: async ({ input }) => {
+    const result = await this.novaFerramenta.execute({ input });
+    return result.success ? `✅ ${result.data}` : `❌ Erro`;
+  }
+}</code></pre>
+                    </div>
+                    
+                    <h2>🧪 Testing</h2>
+                    <div class="code-block">
+                        <pre><code># Testes unitários
+npm run test:unit
+
+# Testes de integração
+npm run test:integration
+
+# Test coverage
+npm run test:coverage
+
+# Testar build em todas as plataformas
+npm run test:build</code></pre>
+                    </div>
+                </section>
+
+                <section id="changelog" class="docs-section">
+                    <h1>📋 Changelog</h1>
+                    
+                    <h2>v2.1.0 (Current)</h2>
+                    <div class="changelog-version">
+                        <h3>🆕 Novos Recursos</h3>
+                        <ul>
+                            <li>Suporte completo para Google Gemini (multiple models)</li>
+                            <li>Sistema de ferramentas de IA expandido (20+ tools)</li>
+                            <li>Integração avançada com Google Calendar e Tasks</li>
+                            <li>Monitoramento inteligente de sistema</li>
+                            <li>Interface aprimorada com modo tela cheia</li>
+                        </ul>
+                        
+                        <h3>🔧 Melhorias</h3>
+                        <ul>
+                            <li>Performance de streaming de IA otimizada</li>
+                            <li>Gestão de contexto e histórico melhorada</li>
+                            <li>Sistema de prioridades de tarefas refinado</li>
+                            <li>Segurança de armazenamento de chaves fortalecida</li>
+                        </ul>
+                        
+                        <h3>🐛 Correções</h3>
+                        <ul>
+                            <li>Problemas de conectividade IMAP resolvidos</li>
+                            <li>Vazamentos de memória em monitoramento corrigidos</li>
+                            <li>Compatibilidade com Linux Wayland melhorada</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>v2.0.0</h2>
+                    <div class="changelog-version">
+                        <h3>🚀 Grandes Mudanças</h3>
+                        <ul>
+                            <li>Arquitetura de múltiplos provedores de IA</li>
+                            <li>Sistema de ferramentas de IA (AI Tools)</li>
+                            <li>Interface React completamente redesenhada</li>
+                            <li>Base de conhecimento integrada</li>
+                        </ul>
+                        
+                        <h3>💥 Breaking Changes</h3>
+                        <ul>
+                            <li>Configuração de API keys redesenhada</li>
+                            <li>Comandos de voz reestruturados</li>
+                            <li>Migração automática de configurações v1.x</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>v1.5.0</h2>
+                    <div class="changelog-version">
+                        <h3>🆕 Recursos</h3>
+                        <ul>
+                            <li>Suporte inicial para OpenAI GPT-4</li>
+                            <li>Quadro de ideias (tech feeds)</li>
+                            <li>Atalhos globais multiplataforma</li>
+                            <li>Integração com VS Code</li>
+                        </ul>
+                    </div>
+                    
+                    <h2>v1.0.0</h2>
+                    <div class="changelog-version">
+                        <h3>🎉 Lançamento Inicial</h3>
+                        <ul>
+                            <li>Assistente desktop com Groq LLaMA</li>
+                            <li>Resumos inteligentes de email</li>
+                            <li>Análise básica de código</li>
+                            <li>Automação de builds</li>
+                            <li>Interface desktop flutuante</li>
+                        </ul>
                     </div>
                 </section>
             </div>
