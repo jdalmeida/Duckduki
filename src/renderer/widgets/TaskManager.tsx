@@ -16,16 +16,11 @@ import {
   MdLightbulb,
   MdPriorityHigh,
   MdKeyboardArrowUp,
-  MdKeyboardArrowDown,
   MdCheckCircle,
-  MdPendingActions,
-  MdCancel,
-  MdSave,
   MdRefresh,
   MdFolder,
   MdSchedule,
-  MdLoop,
-  MdFiberManualRecord
+  MdLoop
 } from 'react-icons/md';
 
 interface Task {
@@ -314,16 +309,6 @@ ${task.timeTracking.sessions.map((session, index) =>
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critica': return '#ff4757';
-      case 'alta': return '#ff6b35';
-      case 'media': return '#ffa726';
-      case 'baixa': return '#66bb6a';
-      default: return '#9e9e9e';
-    }
-  };
-
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case 'critica': return '🔴';
@@ -523,7 +508,7 @@ ${task.timeTracking.sessions.map((session, index) =>
                   key={task.id}
                   className={`task-item priority-${task.priority} status-${task.status}`}
                 >
-                  <div className="task-item-header" style={{backgroundColor: `${getPriorityColor(task.priority)}90`}}>
+                  <div className="task-item-header">
                     <div className="task-priority">
                       <span className="priority-icon">{getPriorityIcon(task.priority)}</span>
                       <span className="priority-label">{task.priority.toUpperCase()}</span>

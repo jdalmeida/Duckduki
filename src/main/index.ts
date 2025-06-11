@@ -276,6 +276,7 @@ class CoPilotoDesktop {
       roundedCorners: true, // Bordas arredondadas (macOS/Linux)
       hasShadow: false, // Remover sombra da janela no Windows
       frame: false,
+      backgroundMaterial: 'none',
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,

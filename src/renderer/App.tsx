@@ -284,14 +284,9 @@ const App: React.FC = () => {
 
   return (
           <ThemeProvider>
-        <div style={{ background: 'transparent' }} className={`app theme-transition ${isFullscreen ? 'fullscreen' : ''}`}>
+        <div style={{ background: !isFullscreen ? 'transparent' : 'var(--bg-primary)' }} className={`app theme-transition ${isFullscreen ? 'fullscreen' : ''}`}>
           {isFullscreen ? (
           <FullscreenMode
-            onToggleFullscreen={toggleFullscreen}
-            onOpenFeed={() => { setShowFeedPanel(true); toggleFullscreen(); } }
-            onOpenTasks={() => { setShowTaskManager(true); toggleFullscreen(); } }
-            onOpenKnowledge={() => { setShowKnowledgePanel(true); toggleFullscreen(); } }
-            onOpenSettings={() => { setShowSettings(true); toggleFullscreen(); } }
             showFeedPanel={showFeedPanel}
             showTaskManager={showTaskManager}
             showKnowledgePanel={showKnowledgePanel}
@@ -301,8 +296,7 @@ const App: React.FC = () => {
             onSetShowKnowledgePanel={setShowKnowledgePanel}
             onShowSettings={() => setShowSettings(true)}
             onFullscreenChange={setIsFullscreen}
-            darkMode={false}
-            onToggleDarkMode={() => {}}
+            darkMode={true}
           />
         ) : (
           <SpotlightMode
