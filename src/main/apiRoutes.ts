@@ -167,93 +167,44 @@ export class ChatAPIServer {
         // Verificar se aiToolsService está disponível
         const hasAITools = !!this.aiToolsService;
         console.log('🔍 [CHAT API] AIToolsService disponível:', hasAITools);
-        console.log('🔍 [CHAT API] AIManager disponível:', !!this.aiManager);
-        console.log('🔍 [CHAT API] Provedores configurados:', this.aiManager.getAvailableProviders().filter(p => p.configured));
+
+        const lastMessage = messages[messages.length - 1];
+        const chatHistory = messages.slice(0, -1);
+
+        let response: string;
 
         if (hasAITools) {
-          // Usar processamento com contexto e ferramentas via stream do AI SDK
-          const lastMessage = messages[messages.length - 1];
-          
-          console.log('🛠️ [CHAT API] Processando com ferramentas via stream...');
+          console.log('🛠️ [CHAT API] Processando com ferramentas');
           
           try {
-            // Usar o AIToolsService diretamente para manter o formato do AI SDK
-            const chatHistory = messages.slice(0, -1);
-            const stream = await this.aiToolsService!.processWithToolsStream(lastMessage.content, chatHistory);
-            
-            console.log('✅ [CHAT API] Stream obtido do AIToolsService');
-            
-            // Usar pipeDataStreamToResponse para manter o formato correto
-            stream.pipeDataStreamToResponse(res, {
-              status: 200,
-              statusText: 'OK',
-              headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type',
-              }
-            });
+            // Usar processWithTools (JSON) que já está funcionando
+            response = await this.aiToolsService!.processWithTools(lastMessage.content, chatHistory);
+            console.log('✅ [CHAT API] Resposta obtida do AIToolsService:', response.substring(0, 100) + '...');
             
           } catch (toolError) {
             console.error('❌ [CHAT API] Erro no processamento com ferramentas:', toolError);
             
-            // Fallback para processamento simples mas usando streaming da AI SDK
-            const lastMessage = messages[messages.length - 1];
-            
-            try {
-              // Tentar usar AIManager diretamente para streaming de contexto
-              const contextStream = await this.aiManager.processCommandWithContextStream(lastMessage.content, messages.slice(0, -1));
-              
-              console.log('✅ [CHAT API] Fallback para stream do AIManager');
-              contextStream.pipeDataStreamToResponse(res, {
-                status: 200,
-                statusText: 'OK',
-                headers: {
-                  'Access-Control-Allow-Origin': '*',
-                  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                  'Access-Control-Allow-Headers': 'Content-Type',
-                }
-              });
-              
-            } catch (fallbackError) {
-              console.error('❌ [CHAT API] Erro no fallback de streaming:', fallbackError);
-              
-              // Último recurso: resposta simples
-              const response = await this.aiManager.processCommand(lastMessage.content, false);
-              
-              res.json({
-                id: Date.now().toString(),
-                object: 'chat.completion.chunk',
-                created: Date.now(),
-                model: this.aiManager.getActiveProvider(),
-                choices: [{
-                  index: 0,
-                  delta: { content: response },
-                  finish_reason: 'stop'
-                }]
-              });
-            }
+            // Fallback: usar processamento simples
+            console.log('🔄 [CHAT API] Tentando fallback com AIManager');
+            response = await this.aiManager.processCommand(lastMessage.content, false);
+            console.log('✅ [CHAT API] Fallback - resposta do AIManager obtida');
           }
           
         } else {
-          // Processamento simples sem ferramentas
           console.log('💬 [CHAT API] Processamento simples sem ferramentas');
-          const lastMessage = messages[messages.length - 1];
-          const response = await this.aiManager.processCommand(lastMessage.content, true);
-          
-          // Resposta em formato compatível com useChat
-          res.json({
-            id: Date.now().toString(),
-            object: 'chat.completion.chunk',
-            created: Date.now(),
-            model: this.aiManager.getActiveProvider(),
-            choices: [{
-              index: 0,
-              delta: { content: response },
-              finish_reason: 'stop'
-            }]
-          });
+          response = await this.aiManager.processCommand(lastMessage.content, false);
+          console.log('✅ [CHAT API] Resposta simples obtida');
         }
+
+        // Retornar resposta JSON compatível com useChat
+        const result = {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: response,
+          createdAt: new Date()
+        };
+
+        res.json(result);
 
         const processingTime = Date.now() - startTime;
         console.log(`🎯 [CHAT API] Processamento concluído em ${processingTime}ms`);
@@ -262,7 +213,13 @@ export class ChatAPIServer {
         const processingTime = Date.now() - startTime;
         console.error(`❌ [CHAT API] Erro após ${processingTime}ms:`, error);
         if (!res.headersSent) {
-          res.status(500).json({ error: error.message });
+          // Retornar erro no formato esperado pelo useChat
+          res.json({
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: `Desculpe, houve um erro ao processar sua solicitação: ${error.message}`,
+            createdAt: new Date()
+          });
         }
       }
     });

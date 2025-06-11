@@ -51,14 +51,49 @@ export const SpotlightMode: React.FC<SpotlightModeProps> = ({
   // Hook do chat IA
   const { messages, input, handleInputChange, handleSubmit, status, error } = useChat({
     api: 'http://localhost:3003/api/chat',
+    fetch: async (url, options = {}) => {
+      console.log('🔄 [SPOTLIGHT] Custom fetch para:', url);
+      
+      // Fazer requisição normal
+      const response = await fetch(url, options);
+      
+      // Se a resposta for JSON simples, processar adequadamente
+      if (response.headers.get('content-type')?.includes('application/json')) {
+        console.log('📡 [SPOTLIGHT] Detectado JSON simples, processando...');
+        
+        const data = await response.json();
+        console.log('📄 [SPOTLIGHT] Dados recebidos:', data);
+        
+        // Simular uma resposta de stream de texto para o useChat
+        const textResponse = data.content || '';
+        const blob = new Blob([textResponse], { type: 'text/plain' });
+        
+        return new Response(blob, {
+          status: response.status,
+          headers: {
+            'Content-Type': 'text/plain',
+          }
+        });
+      }
+      
+      // Para outras respostas, retornar como está
+      return response;
+    },
+    streamProtocol: 'text', // Usar protocolo de texto para JSON simples
     onError: (error) => {
       console.error('❌ [SPOTLIGHT] Chat error:', error);
+      console.error('❌ [SPOTLIGHT] Error details:', {
+        message: error.message,
+        stack: error.stack,
+        toString: error.toString()
+      });
     },
     onFinish: (message, options) => {
       console.log('✅ [SPOTLIGHT] Chat message finished:', message);
     },
     onResponse: (response) => {
       console.log('📡 [SPOTLIGHT] Response status:', response.status);
+      console.log('📡 [SPOTLIGHT] Response headers:', Object.fromEntries(response.headers.entries()));
       if (!response.ok) {
         console.error('❌ [SPOTLIGHT] Response not OK:', response.statusText);
       }

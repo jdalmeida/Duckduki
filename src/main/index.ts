@@ -91,6 +91,10 @@ class CoPilotoDesktop {
     // Inicializar AIToolsService se tiver pelo menos um provedor configurado
     const activeProviders = this.aiManager.getAvailableProviders().filter(p => p.configured);
     if (activeProviders.length > 0) {
+      // CRÍTICO: Configurar AIManager no taskService SEMPRE que há provedores disponíveis
+      taskService.setAIManager(this.aiManager);
+      console.log('✅ AI Manager configurado no Task Service');
+      
       // Obter a primeira chave disponível para compatibilidade com AIToolsService
       const groqKey = await this.securityManager.getGroqKey();
       const openaiKey = await this.securityManager.getOpenAIKey();

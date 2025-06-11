@@ -105,9 +105,12 @@ class TaskService {
   }
 
   async analyzeTaskWithAI(input: string): Promise<TaskAnalysis> {
+    console.log('🔧 [analyzeTaskWithAI] Verificando AI Manager...');
     if (!this.aiManager) {
+      console.error('❌ [analyzeTaskWithAI] IA não configurada');
       throw new Error('IA não configurada');
     }
+    console.log('✅ [analyzeTaskWithAI] AI Manager disponível, processando...');
 
     const prompt = `
 Analise a seguinte tarefa descrita em linguagem natural e extraia informações estruturadas:
@@ -137,11 +140,11 @@ Considere:
 - Tags: palavras-chave relevantes
 - Prazo: extraia datas/horários mencionados
 
-Seja preciso e objetivo. Retorne apenas o JSON.`;
+Seja preciso e objetivo. Retorne apenas o JSON. Retorne o JSON em uma linha e puro, sem formatação em markdown.`;
 
     try {
       const response = await this.aiManager.processCommand(prompt);
-      const analysis = JSON.parse(response);
+      const analysis = JSON.parse(response.replace(/^```json\n/, '').replace(/\n```$/, ''));
       
       // Validar e normalizar dados
       return {
@@ -195,7 +198,12 @@ Seja preciso e objetivo. Retorne apenas o JSON.`;
 
   async addTask(input: string): Promise<TaskServiceResponse> {
     try {
+      console.log('🔧 [TaskService.addTask] Iniciando criação de tarefa:', input);
+      console.log('🔧 [TaskService.addTask] AI Manager disponível:', !!this.aiManager);
+      
       const analysis = await this.analyzeTaskWithAI(input);
+      console.log('✅ [TaskService.addTask] Análise de IA concluída:', analysis);
+      
       const priority = this.calculatePriority(analysis.urgency, analysis.ease);
       
       const task: Task = {

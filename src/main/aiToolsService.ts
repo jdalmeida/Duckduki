@@ -84,7 +84,7 @@ export class AIToolsService {
       case 'google':
         if (!apiKeys.google) throw new Error('Chave Google não configurada');
         const googleModel = createGoogleGenerativeAI({ apiKey: apiKeys.google });
-        return googleModel('gemini-2.5-flash');
+        return googleModel('gemini-1.5-flash');
         
       default:
         throw new Error(`Provedor não suportado: ${activeProvider}`);
@@ -124,7 +124,10 @@ Para a descrição das tarefas, Descreva a tarefa, não use palavras como "taref
           // === FERRAMENTAS DE EMAIL ===
           getEmailSummary: {
             description: 'Obter resumo dos emails recentes',
-            parameters: z.object({})
+            parameters: z.object({}),
+            execute: async () => {
+              return await this.executeGetEmailSummary();
+            }
           },
 
           // === FERRAMENTAS DE TAREFAS ===
@@ -132,35 +135,53 @@ Para a descrição das tarefas, Descreva a tarefa, não use palavras como "taref
             description: 'Adicionar uma nova tarefa',
             parameters: z.object({
               description: z.string().describe('Descrição da tarefa')
-            })
+            }),
+            execute: async (args: { description: string }) => {
+              return await this.executeAddTask(args.description);
+            }
           },
           getTasks: {
             description: 'Listar tarefas com filtros opcionais',
             parameters: z.object({
               status: z.enum(['pendente', 'em_progresso', 'concluida', 'cancelada']).optional(),
               priority: z.enum(['baixa', 'media', 'alta', 'critica']).optional()
-            })
+            }),
+            execute: async (args: { status?: string, priority?: string }) => {
+              return await this.executeGetTasks(args.status, args.priority);
+            }
           },
           updateTaskStatus: {
             description: 'Atualizar o status de uma tarefa',
             parameters: z.object({
               taskId: z.string().describe('ID da tarefa'),
               status: z.enum(['pendente', 'em_progresso', 'concluida', 'cancelada']).describe('Novo status da tarefa')
-            })
+            }),
+            execute: async (args: { taskId: string, status: string }) => {
+              return await this.executeUpdateTaskStatus(args.taskId, args.status);
+            }
           },
           deleteTask: {
             description: 'Deletar uma tarefa',
             parameters: z.object({
               taskId: z.string().describe('ID da tarefa a ser deletada')
-            })
+            }),
+            execute: async (args: { taskId: string }) => {
+              return await this.executeDeleteTask(args.taskId);
+            }
           },
           getTaskStats: {
             description: 'Obter estatísticas das tarefas',
-            parameters: z.object({})
+            parameters: z.object({}),
+            execute: async () => {
+              return await this.executeGetTaskStats();
+            }
           },
           getTaskSuggestions: {
             description: 'Obter sugestões de otimização das tarefas',
-            parameters: z.object({})
+            parameters: z.object({}),
+            execute: async () => {
+              return await this.executeGetTaskSuggestions();
+            }
           },
 
           // === FERRAMENTAS DE FEEDS/NOTÍCIAS ===
@@ -169,14 +190,20 @@ Para a descrição das tarefas, Descreva a tarefa, não use palavras como "taref
             parameters: z.object({
               sources: z.array(z.enum(['hackernews', 'reddit', 'github', 'dev.to'])).optional(),
               limit: z.number().optional().default(10)
-            })
+            }),
+            execute: async (args: { sources?: string[], limit?: number }) => {
+              return await this.executeGetTechNews(args.sources, args.limit);
+            }
           },
           searchNews: {
             description: 'Buscar notícias com palavras-chave específicas',
             parameters: z.object({
               keywords: z.string().describe('Palavras-chave para buscar'),
               sources: z.array(z.enum(['hackernews', 'reddit', 'github', 'dev.to'])).optional()
-            })
+            }),
+            execute: async (args: { keywords: string, sources?: string[] }) => {
+              return await this.executeSearchNews(args.keywords, args.sources);
+            }
           },
 
           // === FERRAMENTAS DE CONHECIMENTO ===
@@ -186,26 +213,38 @@ Para a descrição das tarefas, Descreva a tarefa, não use palavras como "taref
               title: z.string().describe('Título da nota'),
               content: z.string().describe('Conteúdo da nota'),
               tags: z.array(z.string()).optional().describe('Tags para organização')
-            })
+            }),
+            execute: async (args: { title: string, content: string, tags?: string[] }) => {
+              return await this.executeSaveNote(args.title, args.content, args.tags);
+            }
           },
           searchKnowledge: {
             description: 'Buscar informações no repositório de conhecimento',
             parameters: z.object({
               query: z.string().describe('Termo de busca'),
               type: z.enum(['note', 'post_summary', 'conversation', 'document', 'code', 'reference']).optional()
-            })
+            }),
+            execute: async (args: { query: string, type?: string }) => {
+              return await this.executeSearchKnowledge(args.query, args.type);
+            }
           },
 
           // === FERRAMENTAS DO GOOGLE CALENDAR ===
           getGoogleTodayEvents: {
             description: 'Obtém os eventos do Google Calendar para hoje',
-            parameters: z.object({})
+            parameters: z.object({}),
+            execute: async () => {
+              return await this.executeGoogleTodayEvents();
+            }
           },
           getGoogleUpcomingEvents: {
             description: 'Obtém eventos futuros do Google Calendar',
             parameters: z.object({
               days: z.number().optional().describe('Número de dias para buscar (padrão: 7)')
-            })
+            }),
+            execute: async (args: { days?: number }) => {
+              return await this.executeGoogleUpcomingEvents(args.days);
+            }
           },
           createGoogleCalendarEvent: {
             description: 'Cria um novo evento no Google Calendar',
@@ -215,11 +254,17 @@ Para a descrição das tarefas, Descreva a tarefa, não use palavras como "taref
               startTime: z.string().describe('Data/hora de início (ISO 8601)'),
               endTime: z.string().describe('Data/hora de fim (ISO 8601)'),
               location: z.string().optional().describe('Local do evento (opcional)')
-            })
+            }),
+            execute: async (args: { title: string, description: string, startTime: string, endTime: string, location?: string }) => {
+              return await this.executeCreateGoogleCalendarEvent(args.title, args.description, args.startTime, args.endTime, args.location);
+            }
           },
           getGoogleTasks: {
             description: 'Obtém todas as tarefas do Google Tasks',
-            parameters: z.object({})
+            parameters: z.object({}), 
+            execute: async () => {
+              return await this.executeGetGoogleTasks();
+            }
           },
           createGoogleTask: {
             description: 'Cria uma nova tarefa no Google Tasks',
@@ -227,183 +272,54 @@ Para a descrição das tarefas, Descreva a tarefa, não use palavras como "taref
               title: z.string().describe('Título da tarefa'),
               description: z.string().optional().describe('Descrição da tarefa (opcional)'),
               dueDate: z.string().optional().describe('Data de vencimento (ISO 8601, opcional)')
-            })
+            }),
+            execute: async (args: { title: string, description?: string, dueDate?: string }) => {
+              return await this.executeCreateGoogleTask(args.title, args.description, args.dueDate);
+            }
           },
           completeGoogleTask: {
             description: 'Marca uma tarefa do Google Tasks como concluída',
             parameters: z.object({
               taskTitle: z.string().describe('Título da tarefa para buscar e marcar como concluída')
-            })
+            }),
+            execute: async (args: { taskTitle: string }) => {
+              return await this.executeCompleteGoogleTask(args.taskTitle);
+            }
           },
           getGoogleDayOverview: {
             description: 'Obtém um resumo completo do dia com eventos do Google Calendar e tarefas do Google Tasks',
-            parameters: z.object({})
+            parameters: z.object({}),
+            execute: async () => {
+              return await this.executeGetGoogleDayOverview();
+            }
           },
 
           // === FERRAMENTAS DE SISTEMA ===
           getSystemStatus: {
             description: 'Obter status do sistema (CPU, memória, app ativo)',
-            parameters: z.object({})
+            parameters: z.object({}),
+            execute: async () => {
+              return await this.executeGetSystemStatus();
+            }
           },
           analyzeCurrentCode: {
             description: 'Analisar o código atual do projeto',
-            parameters: z.object({})
+            parameters: z.object({}),
+            execute: async () => {
+              return await this.executeAnalyzeCurrentCode();
+            }
           },
           runBuild: {
             description: 'Executar build do projeto',
-            parameters: z.object({})
+            parameters: z.object({}),
+            execute: async () => {
+              return await this.executeRunBuild();
+            }
           }
         },
         toolChoice: 'auto',
         maxTokens: 1024
       });
-
-      // Processar tool calls se existirem
-      if (result.toolCalls && result.toolCalls.length > 0) {
-        const toolResults: Array<{ toolName: string; result: ToolResult }> = [];
-        
-        for (const toolCall of result.toolCalls as any[]) {
-          console.log(`🔧 Executando tool: ${toolCall.toolName}`, toolCall.args);
-          
-          try {
-            let toolResult;
-            switch (toolCall.toolName) {
-              case 'getEmailSummary':
-                toolResult = await this.executeGetEmailSummary();
-                break;
-              
-              case 'addTask':
-                toolResult = await this.executeAddTask(toolCall.args.description);
-                break;
-              
-              case 'getTasks':
-                toolResult = await this.executeGetTasks(toolCall.args.status, toolCall.args.priority);
-                break;
-              
-              case 'updateTaskStatus':
-                toolResult = await this.executeUpdateTaskStatus(toolCall.args.taskId, toolCall.args.status);
-                break;
-              
-              case 'deleteTask':
-                toolResult = await this.executeDeleteTask(toolCall.args.taskId);
-                break;
-              
-              case 'getTaskStats':
-                toolResult = await this.executeGetTaskStats();
-                break;
-              
-              case 'getTaskSuggestions':
-                toolResult = await this.executeGetTaskSuggestions();
-                break;
-              
-              case 'getTechNews':
-                toolResult = await this.executeGetTechNews(toolCall.args.sources, toolCall.args.limit);
-                break;
-              
-              case 'searchNews':
-                toolResult = await this.executeSearchNews(toolCall.args.keywords, toolCall.args.sources);
-                break;
-              
-              case 'saveNote':
-                toolResult = await this.executeSaveNote(toolCall.args.title, toolCall.args.content, toolCall.args.tags);
-                break;
-              
-              case 'searchKnowledge':
-                toolResult = await this.executeSearchKnowledge(toolCall.args.query, toolCall.args.type);
-                break;
-              
-              case 'getSystemStatus':
-                toolResult = await this.executeGetSystemStatus();
-                break;
-              
-              case 'analyzeCurrentCode':
-                toolResult = await this.executeAnalyzeCurrentCode();
-                break;
-              
-              case 'runBuild':
-                toolResult = await this.executeRunBuild();
-                break;
-              
-              // Google Calendar Tools
-              case 'getGoogleTodayEvents':
-                toolResult = await this.executeGoogleTodayEvents();
-                break;
-              
-              case 'getGoogleUpcomingEvents':
-                toolResult = await this.executeGoogleUpcomingEvents(toolCall.args.days);
-                break;
-              
-              case 'createGoogleCalendarEvent':
-                toolResult = await this.executeCreateGoogleCalendarEvent(
-                  toolCall.args.title,
-                  toolCall.args.description,
-                  toolCall.args.startTime,
-                  toolCall.args.endTime,
-                  toolCall.args.location
-                );
-                break;
-              
-              case 'getGoogleTasks':
-                toolResult = await this.executeGetGoogleTasks();
-                break;
-              
-              case 'createGoogleTask':
-                toolResult = await this.executeCreateGoogleTask(
-                  toolCall.args.title,
-                  toolCall.args.description,
-                  toolCall.args.dueDate
-                );
-                break;
-              
-              case 'completeGoogleTask':
-                toolResult = await this.executeCompleteGoogleTask(toolCall.args.taskTitle);
-                break;
-              
-              case 'getGoogleDayOverview':
-                toolResult = await this.executeGetGoogleDayOverview();
-                break;
-              
-              default:
-                toolResult = {
-                  success: false,
-                  error: `Tool desconhecida: ${toolCall.toolName}`
-                };
-            }
-            
-            toolResults.push({
-              toolName: toolCall.toolName,
-              result: toolResult
-            });
-          } catch (error) {
-            console.error(`Erro ao executar tool ${toolCall.toolName}:`, error);
-            toolResults.push({
-              toolName: toolCall.toolName,
-              result: {
-                success: false,
-                error: error.message
-              }
-            });
-          }
-        }
-        
-        // Gerar resposta final com os resultados das tools
-        const toolResultsText = toolResults.map(tr => 
-          `${tr.toolName}: ${tr.result.success ? tr.result.message || 'Executado com sucesso' : tr.result.error}`
-        ).join('\n');
-        
-        const finalResponse = await generateText({
-          model: groqModel,
-          system: 'Você é o Duckduki. Analise os resultados das ferramentas executadas e forneça uma resposta útil e conversacional ao usuário.',
-          messages: [
-            { role: 'user', content: userMessage },
-            { role: 'assistant', content: result.text },
-            { role: 'user', content: `Resultados das ferramentas:\n${toolResultsText}` }
-          ],
-          maxTokens: 512
-        });
-        
-        return finalResponse.text;
-      }
 
       return result.text;
     } catch (error) {
@@ -698,12 +614,15 @@ Quando usar uma ferramenta, sempre explique o que você está fazendo e apresent
 
   async executeAddTask(description: string): Promise<ToolResult> {
     try {
+      console.log('🔧 [executeAddTask] Tentando criar tarefa:', description);
       const result = await this.taskService.addTask(description);
+      console.log('✅ [executeAddTask] Tarefa criada com sucesso:', result);
       return {
         success: true,
-        message: `✅ Tarefa criada: "${description}"`
+        message: `✅ Tarefa criada: "${result.task?.title || description}"`
       };
     } catch (error) {
+      console.error('❌ [executeAddTask] Erro ao criar tarefa:', error);
       return {
         success: false,
         error: `Erro ao criar tarefa: ${error.message}`
